@@ -9,7 +9,9 @@ import SwiftUI
 
 struct NoticeView: View {
     
-    @State private var isLoggedIn = false
+    @EnvironmentObject var userManager: UserManager
+
+    
     @State private var goInquiry = false
     @State private var showLoginAlert = false
     @State private var showLoginSheet = false
@@ -249,29 +251,36 @@ struct NoticeView: View {
                     
                 })
                 
+                NavigationLink(destination: InquiryView(), isActive: $goInquiry) {
+                    EmptyView()
+                }
+                .hidden()
+                
             }) // VStack
             .navigationTitle(Text("공지사항"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(content: {
                 ToolbarItem(placement: .topBarTrailing, content: {
                     Button {
-                                if isLoggedIn {
-                                    goInquiry = true   // InquiryView로 이동 트리거
-                                } else {
-                                    showLoginAlert = true   // Alert 먼저
-                                }
-                            } label: {
-                                Image(systemName: "person.fill.questionmark")
-                            }
+                        print("🔘 문의 버튼 클릭됨")
+                        print("👤 현재 로그인 상태: \(userManager.isLoggedIn)")
+                        
+                        if userManager.isLoggedIn {  // ✅ UserManager 사용!
+                            print("✅ 로그인됨 - InquiryView로 이동")
+                            goInquiry = true
+                        } else {
+                            print("❌ 비로그인 - 로그인 Alert 표시")
+                            showLoginAlert = true
+                        }
+                    } label: {
+                        Image(systemName: "person.fill.questionmark")
+                    }
                 })
             })
-            .navigationDestination(isPresented: $goInquiry) {
-                InquiryView()
-            }
+            
             .alert("로그인이 필요합니다",
                    isPresented: $showLoginAlert) {
                 Button("로그인하기") {
-                    // 👉 로그인 화면 열기 (예: 시트)
                     showLoginSheet = true
                 }
                 Button("취소", role: .cancel) { }
@@ -280,9 +289,22 @@ struct NoticeView: View {
             }
             .sheet(isPresented: $showLoginSheet) {
                 LoginView {
-                    isLoggedIn = true
-                    goInquiry = true   // 로그인 성공하면 InquiryView로 이동
+                    print("🎉 로그인 성공 콜백 호출됨")
+                    print("👤 UserManager 로그인 상태: \(userManager.isLoggedIn)")
+                    
+                    // 시트가 닫힌 후 약간의 딜레이를 두고 이동
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        print("📍 goInquiry = true 설정")
+                        goInquiry = true
+                    }
                 }
+            }
+            // 디버깅용 상태 변화 모니터링
+            .onChange(of: goInquiry) {
+                print("📍 goInquiry 상태 변경: \(goInquiry)")
+            }
+            .onChange(of: userManager.isLoggedIn) {
+                print("👤 UserManager 로그인 상태 변경: \(userManager.isLoggedIn)")
             }
         })
         
@@ -291,4 +313,5 @@ struct NoticeView: View {
 
 #Preview {
     NoticeView()
+        .environmentObject(UserManager())
 }

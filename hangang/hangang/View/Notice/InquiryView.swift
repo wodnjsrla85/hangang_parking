@@ -8,6 +8,9 @@
 import SwiftUI
 
 struct InquiryView: View {
+    
+    @EnvironmentObject var userManager: UserManager
+    
     var body: some View {
 
             VStack (alignment: .leading){
@@ -31,5 +34,8 @@ struct InquiryView: View {
 } // view
 
 #Preview {
-    InquiryView()
+    NavigationView {
+        InquiryView()
+            .environmentObject(UserManager())
+    }
 }
