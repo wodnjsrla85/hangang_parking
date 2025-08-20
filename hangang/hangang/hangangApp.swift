@@ -11,7 +11,7 @@ import SwiftUI
 struct hangangApp: App {
     var body: some Scene {
         WindowGroup {
-            NoticeView()
+            MainView()
         }
     }
 }
