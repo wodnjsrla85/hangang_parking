@@ -43,13 +43,6 @@ collection_marker = db.Marker
 # ───────────────────────────
 # Pydantic 모델
 # ───────────────────────────
-class Student(BaseModel):
-    code: str
-    name: str
-    dept: str
-    phone: str
-    # image: Optional[str] = None  # base64 문자열
-
 class User(BaseModel):
     id: str
     pw: str
@@ -71,15 +64,6 @@ class Marker(BaseModel):
     method : str
     price : str
     phone : str
-
-class StudentUpdate(BaseModel):
-    code: Optional[str] = None
-    name: Optional[str] = None
-    dept: Optional[str] = None
-    phone: Optional[str] = None
-
-class StudentUpdateAll(StudentUpdate):
-    image: Optional[str] = None  # base64 문자열
 
 # ───────────────────────────
 collection = db.Inquiry
@@ -122,18 +106,6 @@ class UserLogin(BaseModel):
     id: str
     pw: str
 
-# ─────────────────────────── 
-# 유틸: Mongo 문서 포맷 보정
-# ───────────────────────────
-def normalize_student(doc: dict) -> dict:
-    """_id를 str로, image(bytes)를 base64로 바꿔서 반환"""
-    if not doc:
-        return doc
-    doc['_id'] = str(doc.get('_id'))
-    if 'image' in doc and doc['image']:
-        if isinstance(doc['image'], (bytes, bytearray)):
-            doc['image'] = base64.b64encode(doc['image']).decode('utf-8')
-    return doc
 
 def normalize_marker(doc: dict) -> dict:
     """_id를 str로, image(bytes)를 base64로 바꿔서 반환"""
@@ -142,16 +114,19 @@ def normalize_marker(doc: dict) -> dict:
     doc['_id'] = str(doc.get('_id'))
     return doc
 
-# ───────────────────────────
-# Student API
-# ───────────────────────────
-# ─────────────────────────── 
 def normalize_inquiry(doc: dict) -> dict:
     """_id를 str로 변환"""
     if not doc:
         return doc
     doc['_id'] = str(doc.get('_id'))
+    if 'image' in doc and doc['image']:
+        if isinstance(doc['image'], (bytes, bytearray)):
+            doc['image'] = base64.b64encode(doc['image']).decode('utf-8')
     return doc
+# ───────────────────────────
+# Student API
+# ───────────────────────────
+# ─────────────────────────── 
 
 def normalize_user(doc: dict) -> dict:
     """User 문서 정규화"""
@@ -164,90 +139,6 @@ def normalize_user(doc: dict) -> dict:
 # Inquiry API (기존)
 # ─────────────────────────── 
 
-@app.get('/select')
-async def select():
-    students = await collection_student.find().to_list(None)
-    results = [normalize_student(s) for s in students]
-    inquirys = await collection.find().to_list(None)
-    results = [normalize_inquiry(s) for s in inquirys]
-    return {'results': results}
-
-@app.get('/select/{code}')
-async def select_one(code: str):
-    student = await collection_student.find_one({'code': code})
-    if not student:
-        raise HTTPException(status_code=404, detail='Student Not Found')
-    return {'result': normalize_student(student)}
-@app.get('/select/{userID}')
-async def select_one(userID: str):
-    inquiry = await collection.find_one({'userID': userID})
-    if not inquiry:
-        raise HTTPException(status_code=404, detail='Inquiry Not Found')
-    return {'result': normalize_inquiry(inquiry)}
-
-@app.post('/insert')
-async def insert(student: Student):
-    # code 중복 검사
-    existing = await collection_student.find_one({'code': student.code})
-async def insert(inquiry: Inquiry):
-    # userID + title 중복 검사 (같은 사용자가 같은 제목으로 문의하는 것 방지)
-    existing = await collection.find_one({
-        'userID': inquiry.userID, 
-        'title': inquiry.title
-    })
-    if existing:
-        raise HTTPException(status_code=400, detail='Student is existed.')
-
-    data = student.model_dump()
-    # image(base64) → bytes
-    if data.get('image'):
-        try:
-            data['image'] = base64.b64decode(data['image'])
-        except Exception:
-            raise HTTPException(status_code=400, detail='Invalid Base64 image')
-
-    await collection_student.insert_one(data)
-        raise HTTPException(status_code=400, detail='Same inquiry already exists.')
-     
-    data = inquiry.model_dump()
-    await collection.insert_one(data)
-    return {'result': 'OK'}
-
-@app.put('/update/{code}')
-async def update(code: str, student: StudentUpdate):
-    # 부분 업데이트 (image 제외)
-    data = student.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(status_code=400, detail='No Field For Update')
-
-    result = await collection_student.update_one({'code': code}, {'$set': data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail='Student Not Found')
-    return {'result': 'OK'}
-
-@app.put('/updateAll/{code}')
-async def update_all(code: str, student: StudentUpdateAll):
-    # 전체 필드 업데이트 (image 포함)
-    data = student.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(status_code=400, detail='No Field For Update')
-
-    if 'image' in data and data['image']:
-        try:
-            data['image'] = base64.b64decode(data['image'])
-        except Exception:
-            raise HTTPException(status_code=400, detail='Invalid Base64 image')
-
-    result = await collection_student.update_one({'code': code}, {'$set': data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail='Student Not Found')
-    return {'result': 'OK'}
-
-@app.delete('/delete/{code}')
-async def delete(code: str):
-    result = await collection_student.delete_one({'code': code})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail='Student Not Found')
 @app.put('/update/{userID}')
 async def update(userID: str, inquiry: InquiryUpdate):
     # 부분 업데이트 (관리자 답변 등)
@@ -258,6 +149,19 @@ async def update(userID: str, inquiry: InquiryUpdate):
     result = await collection.update_one({'userID': userID}, {'$set': data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail='Inquiry Not Found')
+    return {'result': 'OK'}
+
+@app.post('/insert')
+async def insert(inquiry: Inquiry):
+    # userID + title 중복 검사 (같은 사용자가 같은 제목으로 문의하는 것 방지)
+    existing = await collection.find_one({
+        'userID': inquiry.userID, 
+        'title': inquiry.title
+    })
+    if existing:raise HTTPException(status_code=400, detail='Same inquiry already exists.')
+     
+    data = inquiry.model_dump()
+    await collection.insert_one(data)
     return {'result': 'OK'}
 
 # ───────────────────────────
