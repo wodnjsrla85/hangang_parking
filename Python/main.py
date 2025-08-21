@@ -181,6 +181,12 @@ async def delete(id: str):
         raise HTTPException(404, 'Content Not Found')    
     return {'result': 'OK'}
 
+@app.get('/select')
+async def select():
+    inquirys = await collection.find().to_list(None)
+    results = [normalize_inquiry(s) for s in inquirys]
+    return {'results': results}
+
 @app.get('/postlike/select')
 async def select_postlikes():
     docs = await postlike_collection.find().to_list(None)
