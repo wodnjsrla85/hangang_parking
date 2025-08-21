@@ -485,27 +485,13 @@ struct ModernEventCard: View {
     
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            // 이미지
-            AsyncImage(url: URL(string: "")) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(LinearGradient(
-                        colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .overlay(
-                        Image(systemName: "photo")
-                            .foregroundColor(.white)
-                            .font(.title)
-                    )
-            }
-            .frame(width: 100, height: 130)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            // 🔥 Asset 이미지 로드
+            Image(event.imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 100, height: 130)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             
             // 콘텐츠
             VStack(alignment: .leading, spacing: 12) {
@@ -536,6 +522,7 @@ struct ModernEventCard: View {
         )
     }
 }
+
 
 // MARK: - 이벤트 정보 행
 struct EventInfoRow: View {

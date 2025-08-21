@@ -83,11 +83,13 @@ struct Inquiry: Codable, Identifiable {
     
     // 상태 체크 헬퍼 (빈 값 처리)
     var isPending: Bool {
-        return state == "pending" || state == "0" || state?.isEmpty == true
+        let normalized = state?.lowercased() ?? ""
+        return normalized == "pending" || normalized == "0" || normalized.isEmpty || normalized == "답변대기"
     }
     
     var isAnswered: Bool {
-        return state == "answered" || state == "1"
+        let normalized = state?.lowercased() ?? ""
+        return normalized == "answered" || normalized == "1" || normalized == "true" || normalized == "답변완료"
     }
     
     // 표시용 안전한 값들
