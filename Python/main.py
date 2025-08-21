@@ -242,7 +242,7 @@ async def delete_postlike(id: str):
         raise HTTPException(404, 'PostLike Not Found')
     return {'result': 'OK'}
 
-app.post('/postlike/delete')
+@app.post('/postlike/delete')
 async def delete_postlike_by_user(data: PostLikeDelete):
     res = await postlike_collection.delete_one({
         'postId': data.postId,
