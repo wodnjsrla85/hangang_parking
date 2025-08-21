@@ -14,7 +14,7 @@ class _LoginViewState extends State<LoginView> {
   final InquiryHandler handler = InquiryHandler();
   final idController = TextEditingController();
   final pwController = TextEditingController();
-  
+  // 주
   bool isLoading = false;
 
   // 🔐 로그인 함수 (로직 그대로)
