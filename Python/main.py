@@ -109,6 +109,7 @@ class CommentUpdate(BaseModel):
     deleted: Optional[bool] = None   
     deletedAt: Optional[str] = None  
 
+
 @app.get('/community/select')
 async def select():
     docs = await community_collection.find({'deleted': False}).to_list(None)   
