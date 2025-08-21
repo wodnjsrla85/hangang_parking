@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct detail: View {
+struct BuskingInputView : View {
     @State private var name = ""
     @State private var bandname = ""
     @State private var category = ""
@@ -101,7 +101,7 @@ struct detail: View {
 
     //  insertAction: 성공 여부 반환
     func insertAction() async -> Bool {
-        guard let url = URL(string: "http://127.0.0.1:8000/insert") else { return false }
+        guard let url = URL(string: "http://127.0.0.1:8000/busking/insert") else { return false }
 
         let body: [String: Any] = [
             "userid": "2",
@@ -133,5 +133,5 @@ struct detail: View {
 }
 
 #Preview {
-    detail()
+    BuskingInputView()
 }

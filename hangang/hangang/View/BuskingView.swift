@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct BuskingView: View {
     @State var buskingModel: [Busking] = []
     
     var body: some View {
@@ -68,7 +68,7 @@ struct ContentView: View {
                 Spacer()
                 
                 // 신청 버튼
-                NavigationLink(destination: detail()) {
+                NavigationLink(destination: BuskingInputView()) {
                     Text("버스킹 신청하기")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
@@ -87,7 +87,7 @@ struct ContentView: View {
             .onAppear {
                 buskingModel.removeAll()
                 Task {
-                    buskingModel = try await loadData(url: URL(string:"http://127.0.0.1:8000/select")!)
+                    buskingModel = try await loadData(url: URL(string:"http://127.0.0.1:8000/busking/select")!)
                 }
             }
         }
@@ -102,5 +102,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    BuskingView()
 }
