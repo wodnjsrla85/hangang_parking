@@ -18,6 +18,7 @@ struct WeatherResponse: Codable {
 }
 
 // WeatherViewModel 추가
+@MainActor
 class WeatherViewModel: ObservableObject {
     @Published var weatherText: String = "날씨 정보 로딩 중..."
     @Published var isLoading: Bool = false
@@ -673,19 +674,6 @@ struct ModernMarkerDetailSheet: View {
                             UIApplication.shared.open(phoneURL)
                         }
                     }) {
-                        HStack {
-                            Image(systemName: "phone.fill")
-                            Text("전화걸기")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.blue)
-                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                        )
                     }
                 }
                 .padding(.horizontal, 24)

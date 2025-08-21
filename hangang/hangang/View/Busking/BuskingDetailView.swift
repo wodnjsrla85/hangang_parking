@@ -105,7 +105,7 @@ struct BuskingDetailView: View {
         guard let url = URL(string: "http://127.0.0.1:8000/busking/insert") else { return false }
 
         let body: [String: Any] = [
-            "userid": "2",
+            "userid": "212312312222",
             "name": name,
             "date": dateTime,
             "category": category,

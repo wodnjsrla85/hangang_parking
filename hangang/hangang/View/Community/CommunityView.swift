@@ -6,7 +6,7 @@
 
 import SwiftUI
 
-struct Community: View {
+struct CommunityView: View {
     @State private var contentList: [ContentJSON] = []      // 게시글 목록 상태
     @State private var commentList: [CommentJSON] = []       // 댓글 목록 상태 (개수 계산용)
     @State private var likeList: [PostLikeJSON] = []         // 좋아요 목록 상태 (개수 계산용)
@@ -218,5 +218,5 @@ struct Community: View {
 }
 
 #Preview {
-    Community()
+    CommunityView()
 }
