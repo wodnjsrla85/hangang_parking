@@ -1,26 +1,36 @@
+# main.py
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timezone
-from bson import ObjectId
-import base64
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
-import time
+import uvicorn
+
+# Routes import
+from routes.community import router as community_router
+from routes.postlike import router as postlike_router
+from routes.comment import router as comment_router
+from routes.inquiry import router as inquiry_router
+from routes.user import router as user_router
+from routes.admin import router as admin_router
+from routes.marker import router as marker_router
+from routes.weather import router as weather_router
+from routes.busking import router as busking_router
 
 # ───────────────────────────
-# ─────────────────────────── 
-# FastAPI & Mongo 연결
+# FastAPI 앱 생성 및 설정
 # ───────────────────────────
-# ─────────────────────────── 
-app = FastAPI()
 
-# CORS 설정 추가 (Flutter, iOS 등에서 접근 가능)
+app = FastAPI(
+    title="반포한강 주차수요 예측 앱 프로젝트 API",
+    description="커뮤니티, 문의, 사용자, 관리자, 반포마커, 날씨, 버스킹 등 모든 기능을 포함한 통합 API",
+    version="1.0.0"
+)
+
+# ───────────────────────────
+# CORS 설정
+# ───────────────────────────
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 실제 운영 시에는 구체적인 도메인으로 제한
@@ -29,830 +39,204 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Atlas 사용 시 .env 또는 환경변수로 관리 권장
-# 예) MONGODB_URI="mongodb+srv://<user>:<pass>@cluster.xxx.mongodb.net/?retryWrites=true&w=majority"
+# ───────────────────────────
+# MongoDB 연결 설정
+# ───────────────────────────
+
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb+srv://rlaxoals990504:team2public@team2.jozn4ix.mongodb.net/")
 client = AsyncIOMotorClient(MONGO_URI)
 
-# DB/Collection 이름은 기존 코드와 맞춤
-db = client.lecture
-collection_student = db.student
-collection_user = db.User
-collection_admin = db.Admin
-collection_marker = db.Marker
-collection_busking = db.busking
-
-# 커뮤니티
-db1 = client.contents                  # DB 이름: contents
-community_collection = db1.community  # 게시글
-postlike_collection = db1.postlike     # 좋아요
-comment_collection = db1.comment       # 댓글
-
-# Pydantic Model
-
-class Content(BaseModel):
-    id: str
-    userId: str                      
-    content: str
-    createdAt: str
-    updatedAt: str
-    deleted: bool                    
-    deletedAt: Optional[str] = None  
-
-
-class ContentUpdate(BaseModel):
-    id: Optional[str] = None
-    userId: Optional[str] = None     
-    content: Optional[str] = None
-    createdAt: Optional[str] = None
-    updatedAt: Optional[str] = None
-    deleted: Optional[bool] = None   
-    deletedAt: Optional[str] = None  
-
-
-class PostLike(BaseModel):
-    id: str
-    postId: str
-    userId: str                     
-    createdAt: str
-    updatedAt: Optional[str] = None
-
-
-class PostLikeUpdate(BaseModel):
-    id: Optional[str] = None
-    postId: Optional[str] = None
-    userId: Optional[str] = None
-    createdAt: Optional[str] = None
-
-#  추가: PostLike 삭제용 모델
-class PostLikeDelete(BaseModel):
-    postId: str
-    userId: str
-
-class Comment(BaseModel):
-    id: str
-    postId: str
-    userId: str                      
-    content: str
-    createdAt: str
-    updatedAt: str
-    deleted: bool                    
-    deletedAt: Optional[str] = None  
-
-class CommentUpdate(BaseModel):
-    id: Optional[str] = None
-    postId: Optional[str] = None
-    userId: Optional[str] = None     
-    content: Optional[str] = None
-    createdAt: Optional[str] = None
-    updatedAt: Optional[str] = None
-    deleted: Optional[bool] = None   
-    deletedAt: Optional[str] = None  
-
-
-@app.get('/community/select')
-async def select():
-    docs = await community_collection.find({'deleted': False}).to_list(None)   
-    
-    for doc in docs:
-        
-        doc['id'] = str(doc['_id'])        # _id → id로 변환
-        doc['userId'] = str(doc['userId']) # userId도 문자열로 변환
-        doc.pop('_id', None)               # 원본 _id 제거
-        
-    return {'results': docs}
-
-@app.get('/community/select/{id}')
-async def select_one(id: str):
-    doc = await community_collection.find_one({'_id': ObjectId(id), 'deleted': False}) 
-    if not doc:
-        raise HTTPException(404, 'Content Not Found')
-    
-    
-    doc['id'] = str(doc['_id'])        # _id → id로 변환
-    doc['userId'] = str(doc['userId']) # userId도 문자열로 변환
-    doc.pop('_id', None)               # 원본 _id 제거
-    
-    return {'result': doc}
-
-@app.post('/community/insert')
-async def insert(item: Content):
-    new_object_id = ObjectId()
-    data = item.model_dump()
-
-
-    now = datetime.now(timezone.utc).isoformat()
-    data.update({
-        'createdAt': now,
-        'updatedAt': now,
-        'deleted': False,            
-        'deletedAt': None            
-    })
-    data['_id'] = new_object_id
-    data.pop('id', None)
-
-
-    await community_collection.insert_one(data)
-    return {'result': 'OK'}
-
-@app.put('/community/update/{id}')
-async def update(id: str, patch: ContentUpdate):
-    data = patch.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(400, 'No Field For Update')
-
-
-    data['updatedAt'] = datetime.now(timezone.utc).isoformat()
-    data.pop('id', None)
-
-
-    res = await community_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
-    if res.matched_count == 0:
-        raise HTTPException(404, 'Content Not Found')
-    return {'result': 'OK'}
-
-@app.delete('/community/delete/{id}')
-async def delete(id: str):
-    """논리 삭제: deleted 플래그만 변경"""                
-    now = datetime.now(timezone.utc).isoformat()         
-    res = await community_collection.update_one(         
-        {'_id': ObjectId(id), 'deleted': False},         
-        {'$set': {'deleted': True, 'deletedAt': now}})   
-    if res.matched_count == 0:                           
-        raise HTTPException(404, 'Content Not Found')    
-    return {'result': 'OK'}
-
-@app.get('/select')
-async def select():
-    inquirys = await collection.find().to_list(None)
-    results = [normalize_inquiry(s) for s in inquirys]
-    return {'results': results}
-
-@app.get('/postlike/select')
-async def select_postlikes():
-    docs = await postlike_collection.find().to_list(None)
-    
-    for doc in docs:
-        # ✅ ObjectId를 문자열로 변환
-        doc['id'] = str(doc['_id'])          # _id → id로 변환
-        doc['postId'] = str(doc['postId'])   # postId도 문자열로 변환
-        doc['userId'] = str(doc['userId'])   # userId도 문자열로 변환
-        doc.pop('_id', None)                 # 원본 _id 제거
-        
-    return {'results': docs}
-
-@app.get('/postlike/select/{id}')
-async def select_postlike_one(id: str):
-    doc = await postlike_collection.find_one({'_id': ObjectId(id)})
-    if not doc:
-        raise HTTPException(404, 'PostLike Not Found')
-    
-    
-    doc['id'] = str(doc['_id'])          # _id → id로 변환
-    doc['postId'] = str(doc['postId'])   # postId도 문자열로 변환
-    doc['userId'] = str(doc['userId'])   # userId도 문자열로 변환
-    doc.pop('_id', None)                 # 원본 _id 제거
-    
-    return {'result': doc}
-
-@app.post('/postlike/insert')
-async def insert_postlike(item: PostLike):
-    new_object_id = ObjectId()
-    data = item.model_dump()
-
-
-    data['createdAt'] = datetime.now(timezone.utc).isoformat()
-    data['_id'] = new_object_id
-    data.pop('id', None)
-
-
-    await postlike_collection.insert_one(data)
-    return {'result': 'OK'}
-
-@app.put('/postlike/update/{id}')
-async def update_postlike(id: str, patch: PostLikeUpdate):
-    data = patch.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(400, 'No Field For Update')
-    
-    data.pop('id', None)
-    
-    res = await postlike_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
-    if res.matched_count == 0:
-        raise HTTPException(404, 'PostLike Not Found')
-    return {'result': 'OK'}
-
-@app.delete('/postlike/delete/{id}')
-async def delete_postlike(id: str):
-    res = await postlike_collection.delete_one({'_id': ObjectId(id)})
-    if res.deleted_count == 0:
-        raise HTTPException(404, 'PostLike Not Found')
-    return {'result': 'OK'}
-
-app.post('/postlike/delete')
-async def delete_postlike_by_user(data: PostLikeDelete):
-    res = await postlike_collection.delete_one({
-        'postId': data.postId,
-        'userId': data.userId
-    })
-    if res.deleted_count == 0:
-        raise HTTPException(404, 'PostLike Not Found')
-    return {'result': 'OK'}
-
-@app.get('/comment/select')
-async def select_comments():
-    docs = await comment_collection.find({'deleted': False}).to_list(None)      
-    
-    for doc in docs:
-        #  ObjectId를 문자열로 변환 (댓글은 postId, userId 둘 다 있음)
-        doc['id'] = str(doc['_id'])          # _id → id로 변환
-        doc['postId'] = str(doc['postId'])   # postId도 문자열로 변환
-        doc['userId'] = str(doc['userId'])   # userId도 문자열로 변환
-        doc.pop('_id', None)                 # 원본 _id 제거
-        
-    return {'results': docs}
-
-@app.get('/comment/select/{id}')
-async def select_comment_one(id: str):
-    doc = await comment_collection.find_one({'_id': ObjectId(id)})
-    if not doc:
-        raise HTTPException(404, 'Comment Not Found')
-    
-    #  ObjectId를 문자열로 변환
-    doc['id'] = str(doc['_id'])          # _id → id로 변환
-    doc['postId'] = str(doc['postId'])   # postId도 문자열로 변환
-    doc['userId'] = str(doc['userId'])   # userId도 문자열로 변환
-    doc.pop('_id', None)                 # 원본 _id 제거
-    
-    return {'result': doc}
-
-
-@app.post('/comment/insert')
-async def insert_comment(item: Comment):
-    new_object_id = ObjectId()
-    data = item.model_dump()
-
-
-    now = datetime.now(timezone.utc).isoformat()
-    data.update({
-        'createdAt': now,
-        'updatedAt': now,
-        'deleted': False,           
-        'deletedAt': None           
-    })
-    data['_id'] = new_object_id
-    data.pop('id', None)
-
-
-    await comment_collection.insert_one(data)
-    return {'result': 'OK'}
-
-@app.put('/comment/update/{id}')
-async def update_comment(id: str, patch: CommentUpdate):
-    data = patch.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(400, 'No Field For Update')
-    data['updatedAt'] = datetime.now(timezone.utc).isoformat()
-    data.pop('id', None)
-
-
-    res = await comment_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
-    if res.matched_count == 0:
-        raise HTTPException(404, 'Comment Not Found')
-    return {'result': 'OK'}
-
-@app.delete('/comment/delete/{id}')
-async def delete_comment(id: str):
-    now = datetime.now(timezone.utc).isoformat()                              
-    res = await comment_collection.update_one(                                
-        {'_id': ObjectId(id), 'deleted': False},                              
-        {'$set': {'deleted': True, 'deletedAt': now}})                        
-    if res.matched_count == 0:
-        raise HTTPException(404, 'Comment Not Found')
-    return {'result': 'OK'}
-
 # ───────────────────────────
-# Pydantic 모델
-# ───────────────────────────
-class User(BaseModel):
-    id: str
-    pw: str
-    phone: str
-    date: str
-
-class Admin(BaseModel):
-    id: str
-    pw: str
-    date : str
-
-class Marker(BaseModel):
-    name : str
-    type : str
-    lat : float
-    long : float
-    address : str
-    time : str
-    method : str
-    price : str
-    phone : str
-
-# ───────────────────────────
-collection = db.Inquiry
-user_collection = db.User  # User 컬렉션 추가
-
-# ─────────────────────────── 
-# Pydantic 모델 - Inquiry
-# ─────────────────────────── 
-class Inquiry(BaseModel):
-    userID: str
-    adminID: Optional[str] = None
-    qdate: str
-    adate: Optional[str] = None
-    title: str
-    content: str
-    answerContent: Optional[str] = None
-    state: str
-
-class InquiryUpdate(BaseModel):
-    adminID: Optional[str] = None
-    adate: Optional[str] = None
-    answerContent: Optional[str] = None
-    state: Optional[str] = None
-
-# ─────────────────────────── 
-# Pydantic 모델 - User (기존 MongoDB 구조에 맞춤)
-# ─────────────────────────── 
-class User(BaseModel):
-    id: str        # 기존 DB의 id 필드
-    pw: str        # 기존 DB의 pw 필드  
-    phone: Optional[str] = None
-    date: Optional[str] = None
-
-class UserCreate(BaseModel):
-    id: str
-    pw: str
-    phone: Optional[str] = None
-
-class UserLogin(BaseModel):
-    id: str
-    pw: str
-
-
-def normalize_marker(doc: dict) -> dict:
-    """_id를 str로, image(bytes)를 base64로 바꿔서 반환"""
-    if not doc:
-        return doc
-    doc['_id'] = str(doc.get('_id'))
-    return doc
-
-def normalize_inquiry(doc: dict) -> dict:
-    """_id를 str로 변환"""
-    if not doc:
-        return doc
-    doc['_id'] = str(doc.get('_id'))
-    if 'image' in doc and doc['image']:
-        if isinstance(doc['image'], (bytes, bytearray)):
-            doc['image'] = base64.b64encode(doc['image']).decode('utf-8')
-    return doc
-# ───────────────────────────
-# Student API
-# ───────────────────────────
-# ─────────────────────────── 
-
-def normalize_user(doc: dict) -> dict:
-    """User 문서 정규화"""
-    if not doc:
-        return doc
-    doc['_id'] = str(doc.get('_id'))
-    return doc
-
-# ─────────────────────────── 
-# Inquiry API (기존)
-# ─────────────────────────── 
-
-@app.put('/update/{userID}')
-async def update(userID: str, inquiry: InquiryUpdate):
-    # 부분 업데이트 (관리자 답변 등)
-    data = inquiry.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(status_code=400, detail='No Field For Update')
-     
-    result = await collection.update_one({'userID': userID}, {'$set': data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail='Inquiry Not Found')
-    return {'result': 'OK'}
-
-@app.post('/insert')
-async def insert(inquiry: Inquiry):
-    # userID + title 중복 검사 (같은 사용자가 같은 제목으로 문의하는 것 방지)
-    existing = await collection.find_one({
-        'userID': inquiry.userID, 
-        'title': inquiry.title
-    })
-    if existing:raise HTTPException(status_code=400, detail='Same inquiry already exists.')
-     
-    data = inquiry.model_dump()
-    await collection.insert_one(data)
-    return {'result': 'OK'}
-
-# ───────────────────────────
-# User/Admin/Marker API
+# Routes 포함 (순서대로)
 # ───────────────────────────
 
-@app.post('/user/insert')
-async def insert_user(user: User):
-    # code 중복 검사
-    existing = await collection_user.find_one({'id': user.id})
-    if existing:
-        raise HTTPException(status_code=400, detail='user is existed.')
+# 1. Community 관련 (커뮤니티 게시글, 좋아요, 댓글)
+app.include_router(community_router, tags=["Community"])
+app.include_router(postlike_router, tags=["PostLike"])  
+app.include_router(comment_router, tags=["Comment"])
 
-    data = user.model_dump()
-    await collection_user.insert_one(data)
-    return {'result': 'OK'}
+# 2. 문의 관련 (관리자 페널용)
+app.include_router(inquiry_router, tags=["Inquiry"])
 
-@app.post('/admin/insert')
-async def insert_admin(admin: Admin):
-    # code 중복 검사
-    existing = await collection_admin.find_one({'id': admin.id})
-    if existing:
-        raise HTTPException(status_code=400, detail='admin is existed.')
+# 3. 사용자 및 관리자 관련
+app.include_router(user_router, tags=["User"])
+app.include_router(admin_router, tags=["Admin"])
 
-    data = admin.model_dump()
-    await collection_admin.insert_one(data)
-    return {'result': 'OK'}
+# 4. 지도 및 위치 관련
+app.include_router(marker_router, tags=["Marker"])
 
-@app.post('/marker/insert')
-async def insert_marker(marker: Marker):
-    data = marker.model_dump()
-    await collection_marker.insert_one(data)
-    return {'result': 'OK'}
+# 5. 날씨 정보
+app.include_router(weather_router, tags=["Weather"])
 
-@app.get("/marker/select")
-async def get_markers():
-    projection = {"_id": 0}
-    markers = await collection_marker.find({}, projection).to_list(None)
-    
-    # 디버깅: 실제 데이터 구조 확인
-    if markers:
-        print(f"첫 번째 마커 데이터: {markers[0]}")
-    
-    # 필드명 수정해서 응답
-    for marker in markers:
-        # MongoDB에 실제로 어떤 필드가 있는지 확인 필요
-        # 만약 lat, long 둘 다 있다면:
-        if 'lat' in marker and 'long' in marker:
-            # 그대로 유지하고 lng만 추가
-            marker['lng'] = marker['long']
-        # 만약 long만 있고 실제로는 위도라면:
-        elif 'long' in marker:
-            marker['lat'] = marker['long']  # 위도
-            # 경도는 어디에 저장되어 있나요? 다른 필드명으로?
-            # marker['lng'] = marker['longitude'] # 실제 경도 필드명으로 변경
-    
-    return markers
+# 6. 버스킹 관련
+app.include_router(busking_router, tags=["Busking"])
 
 # ───────────────────────────
-# Weather API (새로 추가)
+# 공통 엔드포인트
 # ───────────────────────────
 
-@app.get("/weather")
-async def get_weather():
-    """
-    다음 날씨 사이트에서 날씨 정보를 크롤링하여 반환합니다.
-    """
-    try:
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--headless")  # 창 안 띄우기
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        
-        driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=chrome_options
-        )
-        
-        driver.get("https://weather.daum.net/?location-regionId=AI10000901&weather-cp=kweather")
-        time.sleep(2)  # 페이지 로딩 대기
-        
-        weathers = []
-        
-        try:
-            xpath = '//*[@id="fc7ac7d4-ea2b-4850-bfd1-4f1ba87a03af"]/div/div/div[2]/div'
-            elem = driver.find_element(By.XPATH, xpath)
-            text = elem.text.strip()
-            weathers.append({"title": text})
-        except Exception as e:
-            # XPath가 변경되었을 경우를 대비한 대안
-            try:
-                # 클래스나 다른 selector로 시도
-                elem = driver.find_element(By.CSS_SELECTOR, "[data-testid='weather-summary']")
-                text = elem.text.strip()
-                weathers.append({"title": text})
-            except:
-                weathers.append({"title": "날씨 정보를 가져올 수 없습니다."})
-                print(f"Weather scraping error: {e}")
-        
-        driver.quit()
-        return {"results": weathers}
-        
-    except Exception as e:
-        print(f"Weather API error: {e}")
-        raise HTTPException(status_code=500, detail=f"날씨 정보를 가져오는데 실패했습니다: {str(e)}")
+@app.get("/", tags=["Root"])
+async def root():
+    """API 루트 엔드포인트"""
+    return {
+        "message": "한강 프로젝트 API 서버",
+        "version": "1.0.0",
+        "status": "running",
+        "available_services": [
+            "Community (게시글, 좋아요, 댓글)",
+            "Inquiry (문의 관리)",
+            "User (사용자 관리)", 
+            "Admin (관리자 관리)",
+            "Marker (지도 마커)",
+            "Weather (날씨 정보)",
+            "Busking (버스킹 관리)"
+        ],
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
 
-# ───────────────────────────
-# ─────────────────────────── 
-# User API (새로 추가)
-# ─────────────────────────── 
-
-@app.post('/api/user/signup')
-async def signup(user: UserCreate):
-    """회원가입 API"""
-    try:
-        # 중복 아이디 확인
-        existing_user = await user_collection.find_one({'id': user.id})
-        if existing_user:
-            raise HTTPException(status_code=400, detail='이미 존재하는 아이디입니다')
-        
-        # 유효성 검사
-        if len(user.id) < 3:
-            raise HTTPException(status_code=400, detail='아이디는 3자 이상이어야 합니다')
-        
-        if len(user.pw) < 4:
-            raise HTTPException(status_code=400, detail='비밀번호는 4자 이상이어야 합니다')
-        
-        # 사용자 데이터 준비 (기존 DB 구조에 맞춤)
-        user_data = {
-            'id': user.id,
-            'pw': user.pw,  # 실제 운영에서는 해시화 권장
-            'phone': user.phone or "",
-            'date': datetime.utcnow().strftime('%Y-%m-%d')
-        }
-        
-        # MongoDB에 저장
-        result = await user_collection.insert_one(user_data)
-        
-        print(f"✅ 회원가입 성공: {user.id}")
-        
-        return {
-            'result': 'OK',
-            'message': '회원가입이 완료되었습니다',
-            'userID': user.id
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ 회원가입 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"회원가입 실패: {str(e)}")
-
-@app.post('/api/user/login')
-async def login(user_login: UserLogin):
-    """로그인 API"""
-    try:
-        # 사용자 조회
-        user = await user_collection.find_one({'id': user_login.id})
-        if not user:
-            raise HTTPException(status_code=401, detail='아이디 또는 비밀번호가 올바르지 않습니다')
-        
-        # 비밀번호 확인
-        if user['pw'] != user_login.pw:
-            raise HTTPException(status_code=401, detail='아이디 또는 비밀번호가 올바르지 않습니다')
-        
-        print(f"✅ 로그인 성공: {user['id']}")
-        
-        return {
-            'result': 'OK',
-            'message': '로그인 성공',
-            'user': {
-                'id': user['id'],
-                'phone': user.get('phone', ''),
-                'date': user.get('date', '')
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ 로그인 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"로그인 실패: {str(e)}")
-    
-@app.get('/select/user/{userID}')
-async def select_user_inquiries(userID: str):
-    """특정 사용자의 모든 문의 조회"""
-    inquiries = await collection.find({'userID': userID}).to_list(None)
-    if not inquiries:
-        raise HTTPException(status_code=404, detail='No inquiries found for this user')
-    results = [normalize_inquiry(doc) for doc in inquiries]
-    return {'results': results}
-
-
-@app.get('/api/user/{userID}')
-async def get_user(userID: str):
-    """사용자 정보 조회 API"""
-    try:
-        user = await user_collection.find_one({'id': userID})
-        if not user:
-            raise HTTPException(status_code=404, detail='사용자를 찾을 수 없습니다')
-        
-        return {
-            'result': 'OK',
-            'user': {
-                'id': user['id'],
-                'phone': user.get('phone', ''),
-                'date': user.get('date', '')
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ 사용자 조회 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"사용자 조회 실패: {str(e)}")
-
-# ─────────────────────────── 
-# 헬스체크 및 CORS 설정
-# ─────────────────────────── 
-
-@app.get('/health')
+@app.get('/health', tags=["Health"])
 async def health_check():
-    """서버 상태 확인"""
+    """서버 및 데이터베이스 상태 확인"""
     try:
         # MongoDB 연결 테스트
         await client.admin.command('ping')
+        
+        # 각 데이터베이스 컬렉션 확인
+        db_lecture = client.lecture
+        db_contents = client.contents
+        
+        collections_status = {
+            "lecture_db": {
+                "Inquiry": "connected",
+                "User": "connected", 
+                "Admin": "connected",
+                "Marker": "connected",
+                "busking": "connected"
+            },
+            "contents_db": {
+                "community": "connected",
+                "postlike": "connected", 
+                "comment": "connected"
+            }
+        }
+        
         return {
-            'status': 'healthy', 
+            'status': 'healthy',
             'database': 'connected',
-            'collections': ['Inquiry', 'User']
+            'timestamp': uvicorn.main.datetime.datetime.now().isoformat(),
+            'collections': collections_status
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Database connection failed: {str(e)}"
+        )
 
-# CORS 설정 (iOS 앱 연동용)
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 프로덕션에서는 특정 도메인만 허용
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ─────────────────────────── 
-# 개발용 엔드포인트
-# ─────────────────────────── 
-
-@app.get('/api/debug/users')
-async def debug_users():
-    """개발용: 모든 사용자 조회"""
-    try:
-        users = await user_collection.find().to_list(None)
-        results = []
-        for user in users:
-            results.append({
-                'id': user.get('id'),
-                'phone': user.get('phone', ''),
-                'date': user.get('date', ''),
-                '_id': str(user.get('_id'))
-            })
-        return {'users': results, 'count': len(results)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get('/api/debug/inquiries')
-async def debug_inquiries():
-    """개발용: 모든 문의 조회"""
-    try:
-        inquiries = await collection.find().to_list(None)
-        results = [normalize_inquiry(doc) for doc in inquiries]
-        return {'inquiries': results, 'count': len(results)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-
-
-# ───────────────────────────
-# Pydantic 모델
-# ───────────────────────────
-class busking(BaseModel):
-    userid : str
-    name : str
-    date : str
-    category : str
-    content : str
-    bandName : str
-    state : int
-    # image: Optional[str] = None  # base64 문자열
-
-class buskingUpdate(BaseModel):
-    userid : Optional[str] = None
-    name : Optional[str] = None
-    date : Optional[str] = None
-    category : Optional[str] = None
-    content : Optional[str] = None
-    bandName : Optional[str] = None
-    state : Optional[int] = None
-
-# class buskingUpdateAll(buskingUpdate):
-#     image: Optional[str] = None  # base64 문자열
-
-# ───────────────────────────
-# 유틸: Mongo 문서 포맷 보정
-# ───────────────────────────
-def normalize_busking(doc: dict) -> dict:
-    """userid를 str로, image(bytes)를 base64로 바꿔서 반환"""
-    if not doc:
-        return doc
-    doc['_id'] = str(doc.get('_id'))
-    return doc
+@app.get('/api/info', tags=["Info"])
+async def api_info():
+    """API 정보 및 엔드포인트 목록"""
+    return {
+        "api_name": "한강 프로젝트 통합 API",
+        "version": "1.0.0",
+        "description": "Flutter Web 관리자 페널 및 iOS 앱을 위한 통합 백엔드 API",
+        "endpoints": {
+            "community": {
+                "description": "커뮤니티 게시글 관리",
+                "endpoints": [
+                    "GET /community/select",
+                    "GET /community/select/{id}",
+                    "POST /community/insert", 
+                    "PUT /community/update/{id}",
+                    "DELETE /community/delete/{id}"
+                ]
+            },
+            "postlike": {
+                "description": "게시글 좋아요 관리", 
+                "endpoints": [
+                    "GET /postlike/select",
+                    "POST /postlike/insert",
+                    "DELETE /postlike/delete/{id}"
+                ]
+            },
+            "comment": {
+                "description": "댓글 관리",
+                "endpoints": [
+                    "GET /comment/select", 
+                    "POST /comment/insert",
+                    "PUT /comment/update/{id}",
+                    "DELETE /comment/delete/{id}"
+                ]
+            },
+            "inquiry": {
+                "description": "문의 관리 (관리자 페널)",
+                "endpoints": [
+                    "GET /select",
+                    "PUT /update/{inquiry_id}",
+                    "POST /insert",
+                    "GET /select/user/{userID}"
+                ]
+            },
+            "user": {
+                "description": "사용자 관리",
+                "endpoints": [
+                    "POST /api/user/signup",
+                    "POST /api/user/login", 
+                    "GET /api/user/{userID}"
+                ]
+            },
+            "weather": {
+                "description": "날씨 정보",
+                "endpoints": ["GET /weather"]
+            },
+            "busking": {
+                "description": "버스킹 관리", 
+                "endpoints": [
+                    "GET /busking/select",
+                    "POST /busking/insert",
+                    "PUT /busking/update/{userid}"
+                ]
+            }
+        },
+        "clients": {
+            "flutter_web_admin": "문의 관리 페널 (Inquiry API 사용)",
+            "ios_app": "전체 API 사용",
+            "web_app": "Community, User, Weather API 사용"
+        }
+    }
 
 # ───────────────────────────
-# API
+# 서버 실행 설정
 # ───────────────────────────
 
-@app.get('/busking/select')
-async def select():
-    busking = await collection_busking.find().to_list(None)
-    results = [normalize_busking(s) for s in busking]
-    return {'results': results}
-
-# @app.get('/select/{userid}')
-# async def select_one(userid: str):
-#     busking = await collection.find_one({'userid': userid})
-#     if not busking:
-#         raise HTTPException(status_code=404, detail='busking Not Found')
-#     return {'result': normalize_busking(busking)}
-
-@app.post('/busking/insert')
-async def insert(busking: busking):
-    # userid 중복 검사
-    existing = await collection_busking.find_one({'userid': busking.userid})
-    if existing:
-        raise HTTPException(status_code=400, detail='busking is existed.')
-
-    data = busking.dict()
-    # image(base64) → bytes
-    if data.get('image'):
-        try:
-            data['image'] = base64.b64decode(data['image'])
-        except Exception:
-            raise HTTPException(status_code=400, detail='Invalid Base64 image')
-
-    await collection_busking.insert_one(data)
-    return {'result': 'OK'}
-
-@app.put('/busking/update/{userid}')
-async def update(userid: str, busking: buskingUpdate):
-    # 부분 업데이트 (image 제외)
-    data = busking.dict(exclude_unset=True)
-    if not data:
-        raise HTTPException(status_code=400, detail='No Field For Update')
-
-    result = await collection_busking.update_one({'userid': userid}, {'$set': data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail='busking Not Found')
-    return {'result': 'OK'}
-
-@app.delete('/busking/delete/{userid}')
-async def delete(userid: str):
-    result = await collection_busking.delete_one({'userid': userid})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail='busking Not Found')
-    return {'result': 'OK'}
-
-
-# ─────────────────────────── 
-# 실행
-# ───────────────────────────
-# ─────────────────────────── 
 if __name__ == '__main__':
-    import uvicorn
-    print("🚀 FastAPI 서버 시작")
-    print("📋 사용 가능한 엔드포인트:")
-    print("   - Inquiry API: /select, /insert, /update")
-    print("   - User API: /api/user/signup, /api/user/login")
-    print("   - Debug: /api/debug/users, /api/debug/inquiries")
-    print("   - Health: /health")
+    print("🚀 한강 프로젝트 FastAPI 서버 시작")
+    print("=" * 50)
+    print("📋 포함된 서비스:")
+    print("   ✅ Community API - 커뮤니티 게시글, 좋아요, 댓글")
+    print("   ✅ Inquiry API - 문의 관리 (Flutter Web 관리자 페널)")
+    print("   ✅ User API - 사용자 회원가입, 로그인")
+    print("   ✅ Admin API - 관리자 관리")
+    print("   ✅ Marker API - 지도 마커 관리")
+    print("   ✅ Weather API - 날씨 정보 크롤링")
+    print("   ✅ Busking API - 버스킹 관리")
+    print("=" * 50)
+    print("🌐 접속 정보:")
+    print("   - 서버 주소: http://127.0.0.1:8000")
+    print("   - API 문서: http://127.0.0.1:8000/docs")
+    print("   - 상태 확인: http://127.0.0.1:8000/health")
+    print("   - API 정보: http://127.0.0.1:8000/api/info")
+    print("=" * 50)
+    print("📱 클라이언트 접속:")
+    print("   - Flutter Web (관리자): http://localhost:port")
+    print("   - iOS 앱: http://127.0.0.1:8000")
+    print("=" * 50)
+    print("⚡ 서버를 시작합니다...")
     
-    # iOS 시뮬레이터에서 호출하려면 host=127.0.0.1 또는 0.0.0.0(포트포워딩/외부접속)
-    uvicorn.run(app, host='127.0.0.1', port=8000)
-
-# Swift에서 날씨 API 호출 예제
-# func fetchWeather() async throws -> [WeatherInfo] {
-#     let url = APIConfig.shared.baseURL.appendingPathComponent("weather")
-#     let (data, response) = try await URLSession.shared.data(from: url)
-#     
-#     guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-#         throw URLError(.badServerResponse)
-#     }
-#     
-#     struct WeatherResponse: Codable { 
-#         let results: [WeatherInfo] 
-#     }
-#     struct WeatherInfo: Codable { 
-#         let title: String 
-#     }
-#     
-#     let decoded = try JSONDecoder().decode(WeatherResponse.self, from: data)
-#     return decoded.results
-# }    uvicorn.run(app, host='127.0.0.1', port=8000)
+    # 서버 실행 (reload 옵션 제거)
+    uvicorn.run(
+        app, 
+        host='127.0.0.1',  # 로컬 접속용 
+        port=8000,
+        log_level="info"
+    )
