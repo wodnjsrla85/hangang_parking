@@ -13,8 +13,10 @@ class UserManager: ObservableObject {
     @Published var currentUserID: String = ""
     @Published var currentUserPhone: String = ""
     
+    static let shared = UserManager()
+    
     // MARK: - Initialization
-    init() {
+    private init() {
         loadUserFromStorage()
     }
     
@@ -38,19 +40,20 @@ class UserManager: ObservableObject {
         do {
             let response = try await loginUser(id: userID, pw: password)
             
-            // 🔧 메인 스레드에서 UI 업데이트
+            // 메인 스레드에서 UI 업데이트 보장
             await MainActor.run {
                 self.currentUserID = response.user.id
                 self.currentUserPhone = response.user.phone ?? ""
                 self.isLoggedIn = true
-                
-                // UserDefaults에 현재 로그인 정보 저장
-                UserDefaults.standard.set(response.user.id, forKey: "currentUserID")
-                UserDefaults.standard.set(response.user.phone ?? "", forKey: "currentUserPhone")
-                UserDefaults.standard.set(true, forKey: "isLoggedIn")
             }
             
+            // UserDefaults에 현재 로그인 정보 저장
+            UserDefaults.standard.set(response.user.id, forKey: "currentUserID")
+            UserDefaults.standard.set(response.user.phone ?? "", forKey: "currentUserPhone")
+            UserDefaults.standard.set(true, forKey: "isLoggedIn")
+            
             print("✅ 서버 로그인 성공: \(response.user.id)")
+            print("🔄 UI 상태 업데이트: isLoggedIn = \(self.isLoggedIn)")
             return .success
             
         } catch {
@@ -64,8 +67,8 @@ class UserManager: ObservableObject {
     func logout() {
         print("🚪 로그아웃: \(currentUserID)")
         
-        // 🔧 메인 스레드에서 UI 업데이트
-        Task { @MainActor in
+        // 메인 스레드에서 UI 업데이트 보장
+        DispatchQueue.main.async {
             self.currentUserID = ""
             self.currentUserPhone = ""
             self.isLoggedIn = false
@@ -74,7 +77,9 @@ class UserManager: ObservableObject {
         // UserDefaults에서 제거
         UserDefaults.standard.removeObject(forKey: "currentUserID")
         UserDefaults.standard.removeObject(forKey: "currentUserPhone")
-        UserDefaults.standard.set(false, forKey: "isLoggedIn")
+        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        
+        print("🔄 로그아웃 완료: isLoggedIn = \(self.isLoggedIn)")
     }
     
     /// 임시 로그인 (개발용) - 기존 데이터 사용

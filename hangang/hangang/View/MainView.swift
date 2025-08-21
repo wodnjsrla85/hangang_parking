@@ -75,10 +75,13 @@ class WeatherViewModel: ObservableObject {
 struct MainView: View {
     @StateObject private var viewModel = MarkerViewModel()
     @StateObject private var weatherViewModel = WeatherViewModel()
+    @EnvironmentObject var userManager: UserManager // UserManager 추가
     @State private var selectedCategory: String = "전체"
     @State private var selectedMarker: Marker?
     @State private var showingBottomSheet = false
     @State private var showingCategoryList = false
+    @State private var showingLoginSheet = false // 로그인 시트 상태 추가
+    @State private var showingLogoutAlert = false // 로그아웃 확인 알림 추가
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.5097778, longitude: 126.9952838),
@@ -123,7 +126,10 @@ struct MainView: View {
                 CategorySelectionView(
                     categories: categories,
                     selectedCategory: $selectedCategory,
-                    showingCategoryList: $showingCategoryList
+                    showingCategoryList: $showingCategoryList,
+                    userManager: userManager,
+                    showingLoginSheet: $showingLoginSheet,
+                    showingLogoutAlert: $showingLogoutAlert
                 )
                 
                 Spacer()
@@ -195,6 +201,19 @@ struct MainView: View {
             )
             .presentationDetents([.height(400)])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingLoginSheet) {
+            LoginView {
+                // 로그인 성공 후 아무것도 안 함 (시트만 닫힘)
+            }
+        }
+        .alert("로그아웃", isPresented: $showingLogoutAlert) {
+            Button("로그아웃", role: .destructive) {
+                userManager.logout()
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("정말로 로그아웃 하시겠습니까?")
         }
     }
     
@@ -328,6 +347,9 @@ struct CategorySelectionView: View {
     let categories: [String]
     @Binding var selectedCategory: String
     @Binding var showingCategoryList: Bool
+    @ObservedObject var userManager: UserManager
+    @Binding var showingLoginSheet: Bool
+    @Binding var showingLogoutAlert: Bool
     
     var body: some View {
         HStack(spacing: 12) {
@@ -359,23 +381,51 @@ struct CategorySelectionView: View {
             
             Spacer()
             
-            // 마커 개수 표시
-            Text("\(getFilteredCount())개")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+            // 로그인/로그아웃 버튼 (더 잘 보이게 개선)
+            Button(action: {
+                if userManager.isLoggedIn {
+                    // 로그아웃 확인 알림 표시
+                    showingLogoutAlert = true
+                } else {
+                    // 로그인 시트 표시
+                    showingLoginSheet = true
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: userManager.isLoggedIn ? "person.fill.checkmark" : "person.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
+                    
+                    Text(userManager.isLoggedIn ? "로그아웃" : "로그인")
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
                 .background(
                     Capsule()
-                        .fill(Color(.systemGray6))
+                        .fill(
+                            LinearGradient(
+                                colors: userManager.isLoggedIn ?
+                                [Color.red, Color.red.opacity(0.8)] :
+                                [Color.blue, Color.cyan],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(
+                            color: (userManager.isLoggedIn ? Color.red : Color.blue).opacity(0.4),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
                 )
+            }
         }
         .padding(.horizontal, 20)
-    }
-    
-    private func getFilteredCount() -> Int {
-        // 실제 필터링된 마커 개수를 반환하는 로직
-        return 42 // 임시값
     }
     
     private func getIconForCategory(_ category: String) -> String {
@@ -615,32 +665,32 @@ struct ModernMarkerDetailSheet: View {
                 }
             }
             
-//            // 액션 버튼들
-//            if let phone = marker.phone, !phone.isEmpty {
-//                VStack(spacing: 12) {
-//                    Button(action: {
-//                        if let phoneURL = URL(string: "tel://\(phone.replacingOccurrences(of: "-", with: ""))") {
-//                            UIApplication.shared.open(phoneURL)
-//                        }
-//                    }) {
-//                        HStack {
-//                            Image(systemName: "phone.fill")
-//                            Text("전화걸기")
-//                        }
-//                        .font(.headline)
-//                        .foregroundColor(.white)
-//                        .frame(maxWidth: .infinity)
-//                        .padding(.vertical, 16)
-//                        .background(
-//                            RoundedRectangle(cornerRadius: 16)
-//                                .fill(Color.blue)
-//                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-//                        )
-//                    }
-//                }
-//                .padding(.horizontal, 24)
-//                .padding(.bottom, 32)
-//            }
+            // 액션 버튼들
+            if let phone = marker.phone, !phone.isEmpty {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        if let phoneURL = URL(string: "tel://\(phone.replacingOccurrences(of: "-", with: ""))") {
+                            UIApplication.shared.open(phoneURL)
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "phone.fill")
+                            Text("전화걸기")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.blue)
+                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            }
         }
         .background(Color(.systemBackground))
     }
@@ -786,4 +836,5 @@ struct CategoryListItem: View {
 
 #Preview {
     MainView()
+        .environmentObject(UserManager.shared)
 }

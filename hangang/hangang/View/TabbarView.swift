@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  TabbarView.swift
 //  hangang
 //
 //  Created by 김재원 on 8/18/25.
@@ -10,7 +10,8 @@ import SwiftUI
 struct TabbarView: View {
     @State var tabCurrent = 0
     @State var lastValidTab = 0 // 마지막 유효한 탭 저장
-    @StateObject var userManager = UserManager() // 앱 전체에 UserManager 연결
+//    @StateObject var userManager = UserManager() // 앱 전체에 UserManager 연결
+    @EnvironmentObject var userManager: UserManager
     
     var body: some View {
         GeometryReader { geometry in
@@ -21,7 +22,6 @@ struct TabbarView: View {
                         .tag(0)
                     
                     NoticeView()
-                        .environmentObject(userManager) // ****
                         .tag(1)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -500,14 +500,17 @@ struct TabbarView_Previews: PreviewProvider {
             // 기본 스타일
             TabbarView()
                 .previewDisplayName("Basic Style")
+                .environmentObject(UserManager.shared)
             
             // 모던 스타일
             ModernTabbarView()
                 .previewDisplayName("Modern Style")
+                .environmentObject(UserManager.shared)
         }
     }
 }
 
 #Preview {
     TabbarView()
+        .environmentObject(UserManager.shared)
 }
