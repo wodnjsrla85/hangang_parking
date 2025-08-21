@@ -179,7 +179,7 @@ struct InquiryMetaSection: View {
                     icon: "calendar",
                     label: "작성일",
                     value: inquiry.qdate ?? "날짜 미확인",
-                    color: .green
+                    color: .blue
                 )
                 
                 MetaInfoRow(
@@ -194,7 +194,7 @@ struct InquiryMetaSection: View {
                         icon: "clock.arrow.circlepath",
                         label: "답변일",
                         value: adate,
-                        color: .green
+                        color: .blue
                     )
                 }
             }
