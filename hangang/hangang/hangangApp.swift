@@ -13,7 +13,7 @@ struct hangangApp: App {
     
     var body: some Scene {
         WindowGroup {
-            BuskingView()
+            TabbarView()
                 .environmentObject(UserManager.shared)
         }
     }

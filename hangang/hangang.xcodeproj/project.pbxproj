@@ -6,41 +6,59 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		962288DB2E534D040064274A /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 962288DA2E534D040064274A /* SDWebImageSwiftUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		B2360D852E544C9E00C75C21 /* hangang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hangang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E89FCAF42E531C8400873C30 /* hangang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hangang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AC6BD6252E55692800BC20C4 /* Exceptions for "hangang" folder in "hangang" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E89FCAF32E531C8400873C30 /* hangang */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B2360D872E544C9E00C75C21 /* hangang */ = {
+		E89FCAF62E531C8400873C30 /* hangang */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AC6BD6252E55692800BC20C4 /* Exceptions for "hangang" folder in "hangang" target */,
+			);
 			path = hangang;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		B2360D822E544C9E00C75C21 /* Frameworks */ = {
+		E89FCAF12E531C8400873C30 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				962288DB2E534D040064274A /* SDWebImageSwiftUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		B2360D7C2E544C9E00C75C21 = {
+		E89FCAEB2E531C8400873C30 = {
 			isa = PBXGroup;
 			children = (
-				B2360D872E544C9E00C75C21 /* hangang */,
-				B2360D862E544C9E00C75C21 /* Products */,
+				E89FCAF62E531C8400873C30 /* hangang */,
+				E89FCAF52E531C8400873C30 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		B2360D862E544C9E00C75C21 /* Products */ = {
+		E89FCAF52E531C8400873C30 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B2360D852E544C9E00C75C21 /* hangang.app */,
+				E89FCAF42E531C8400873C30 /* hangang.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,64 +66,68 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B2360D842E544C9E00C75C21 /* hangang */ = {
+		E89FCAF32E531C8400873C30 /* hangang */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B2360D902E544C9F00C75C21 /* Build configuration list for PBXNativeTarget "hangang" */;
+			buildConfigurationList = E89FCAFF2E531C8500873C30 /* Build configuration list for PBXNativeTarget "hangang" */;
 			buildPhases = (
-				B2360D812E544C9E00C75C21 /* Sources */,
-				B2360D822E544C9E00C75C21 /* Frameworks */,
-				B2360D832E544C9E00C75C21 /* Resources */,
+				E89FCAF02E531C8400873C30 /* Sources */,
+				E89FCAF12E531C8400873C30 /* Frameworks */,
+				E89FCAF22E531C8400873C30 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B2360D872E544C9E00C75C21 /* hangang */,
+				E89FCAF62E531C8400873C30 /* hangang */,
 			);
 			name = hangang;
 			packageProductDependencies = (
+				962288DA2E534D040064274A /* SDWebImageSwiftUI */,
 			);
 			productName = hangang;
-			productReference = B2360D852E544C9E00C75C21 /* hangang.app */;
+			productReference = E89FCAF42E531C8400873C30 /* hangang.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		B2360D7D2E544C9E00C75C21 /* Project object */ = {
+		E89FCAEC2E531C8400873C30 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
-					B2360D842E544C9E00C75C21 = {
+					E89FCAF32E531C8400873C30 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
-			buildConfigurationList = B2360D802E544C9E00C75C21 /* Build configuration list for PBXProject "hangang" */;
+			buildConfigurationList = E89FCAEF2E531C8400873C30 /* Build configuration list for PBXProject "hangang" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = B2360D7C2E544C9E00C75C21;
+			mainGroup = E89FCAEB2E531C8400873C30;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				962288D92E534D040064274A /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = B2360D862E544C9E00C75C21 /* Products */;
+			productRefGroup = E89FCAF52E531C8400873C30 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B2360D842E544C9E00C75C21 /* hangang */,
+				E89FCAF32E531C8400873C30 /* hangang */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		B2360D832E544C9E00C75C21 /* Resources */ = {
+		E89FCAF22E531C8400873C30 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +137,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		B2360D812E544C9E00C75C21 /* Sources */ = {
+		E89FCAF02E531C8400873C30 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -125,7 +147,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		B2360D8E2E544C9F00C75C21 /* Debug */ = {
+		E89FCAFD2E531C8500873C30 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -188,7 +210,7 @@
 			};
 			name = Debug;
 		};
-		B2360D8F2E544C9F00C75C21 /* Release */ = {
+		E89FCAFE2E531C8500873C30 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -244,15 +266,17 @@
 			};
 			name = Release;
 		};
-		B2360D912E544C9F00C75C21 /* Debug */ = {
+		E89FCB002E531C8500873C30 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99J9S86R2N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = hangang/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -263,7 +287,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = con.jiho.hangang;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jaewon.hangang;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -271,15 +295,17 @@
 			};
 			name = Debug;
 		};
-		B2360D922E544C9F00C75C21 /* Release */ = {
+		E89FCB012E531C8500873C30 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99J9S86R2N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = hangang/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -290,7 +316,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = con.jiho.hangang;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jaewon.hangang;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -301,25 +327,44 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B2360D802E544C9E00C75C21 /* Build configuration list for PBXProject "hangang" */ = {
+		E89FCAEF2E531C8400873C30 /* Build configuration list for PBXProject "hangang" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B2360D8E2E544C9F00C75C21 /* Debug */,
-				B2360D8F2E544C9F00C75C21 /* Release */,
+				E89FCAFD2E531C8500873C30 /* Debug */,
+				E89FCAFE2E531C8500873C30 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B2360D902E544C9F00C75C21 /* Build configuration list for PBXNativeTarget "hangang" */ = {
+		E89FCAFF2E531C8500873C30 /* Build configuration list for PBXNativeTarget "hangang" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B2360D912E544C9F00C75C21 /* Debug */,
-				B2360D922E544C9F00C75C21 /* Release */,
+				E89FCB002E531C8500873C30 /* Debug */,
+				E89FCB012E531C8500873C30 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		962288D92E534D040064274A /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		962288DA2E534D040064274A /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 962288D92E534D040064274A /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = B2360D7D2E544C9E00C75C21 /* Project object */;
+	rootObject = E89FCAEC2E531C8400873C30 /* Project object */;
 }
