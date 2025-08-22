@@ -106,7 +106,7 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                 gradient: LinearGradient(
                   colors: widget.isViewMode
                       ? [Color(0xFF3b82f6), Color(0xFF3b82f6)]
-                      : [Color(0xFF667eea), Color(0xFF667eea)],
+                      : [Color(0xFF3b82f6), Color(0xFF3b82f6)],
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
