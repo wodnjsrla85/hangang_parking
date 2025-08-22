@@ -16,6 +16,7 @@ from routes.admin import router as admin_router
 from routes.marker import router as marker_router
 from routes.weather import router as weather_router
 from routes.busking import router as busking_router
+from routes.prediction import router as predict_router
 
 # ───────────────────────────
 # FastAPI 앱 생성 및 설정
@@ -70,6 +71,9 @@ app.include_router(weather_router, tags=["Weather"])
 
 # 6. 버스킹 관련
 app.include_router(busking_router, tags=["Busking"])
+
+# 7. 주차장 예측 관련
+app.include_router(predict_router, tags=["Predict"])
 
 # ───────────────────────────
 # 공통 엔드포인트
