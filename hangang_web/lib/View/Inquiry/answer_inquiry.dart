@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
-import '../Model/inquiry.dart';
+import '../../Model/inquiry.dart';
 
 class AnswerInquiry extends StatefulWidget {
   final Inquiry inquiry;
   final InquiryHandler handler;
+  final bool isViewMode; // 보기 모드 여부
 
   const AnswerInquiry({
     super.key,
     required this.inquiry,
     required this.handler,
+    this.isViewMode = false, // 기본값은 false (편집 모드)
   });
 
   @override
@@ -20,19 +23,24 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
   final TextEditingController controller = TextEditingController();
   bool isSubmitting = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // 보기 모드이면서 이미 답변이 있는 경우 컨트롤러에 답변 내용 설정
+    if (widget.isViewMode && widget.inquiry.answerContent?.isNotEmpty == true) {
+      controller.text = widget.inquiry.answerContent!;
+    }
+  }
+
   Future<void> submitAnswer() async {
     if (controller.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.warning, color: Colors.white),
-              SizedBox(width: 8),
-              Text('답변 내용을 입력해주세요'),
-            ],
-          ),
-          backgroundColor: Color(0xFFf59e0b),
-        ),
+      Get.snackbar(
+        '입력 오류',
+        '답변 내용을 입력해주세요',
+        icon: Icon(Icons.warning, color: Colors.white),
+        backgroundColor: Color(0xFFf59e0b),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
       );
       return;
     }
@@ -47,37 +55,32 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
     setState(() => isSubmitting = false);
 
     if (result.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('답변 등록 성공!'),
-            ],
-          ),
-          backgroundColor: Color(0xFF10b981),
-        ),
+      Get.snackbar(
+        '성공',
+        '답변 등록 성공!',
+        icon: Icon(Icons.check_circle, color: Colors.white),
+        backgroundColor: Color(0xFF10b981),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
       );
-      Navigator.pop(context, true);
+      Get.back(result: true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white),
-              SizedBox(width: 8),
-              Text(result.message ?? '답변 실패'),
-            ],
-          ),
-          backgroundColor: Color(0xFFef4444),
-        ),
+      Get.snackbar(
+        '오류',
+        result.message ?? '답변 실패',
+        icon: Icon(Icons.error, color: Colors.white),
+        backgroundColor: Color(0xFFef4444),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isCompleted = widget.inquiry.state == '답변완료';
+    bool canEdit = !widget.isViewMode && !isCompleted;
+
     return Scaffold(
       backgroundColor: Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -93,7 +96,7 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
             ),
             child: Icon(Icons.arrow_back, color: Color(0xFF667eea), size: 20),
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Get.back(),
         ),
         title: Row(
           children: [
@@ -101,16 +104,22 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  colors: widget.isViewMode 
+                    ? [Color(0xFF3b82f6), Color(0xFF3b82f6)]
+                    : [Color(0xFF667eea), Color(0xFF667eea)],
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.edit, color: Colors.white, size: 20),
+              child: Icon(
+                widget.isViewMode ? Icons.article : Icons.edit, 
+                color: Colors.white, 
+                size: 20
+              ),
             ),
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                "답변 작성",
+                widget.isViewMode ? "문의 상세보기" : "답변 작성",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -169,20 +178,29 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: widget.inquiry.state == '답변완료'
+                              color: isCompleted
                                 ? Color(0xFF10b981).withOpacity(0.1)
                                 : Color(0xFFf59e0b).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              widget.inquiry.state,
-                              style: TextStyle(
-                                color: widget.inquiry.state == '답변완료'
-                                  ? Color(0xFF10b981)
-                                  : Color(0xFFf59e0b),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isCompleted ? Icons.check_circle : Icons.schedule,
+                                  size: 14,
+                                  color: isCompleted ? Color(0xFF10b981) : Color(0xFFf59e0b),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  widget.inquiry.state,
+                                  style: TextStyle(
+                                    color: isCompleted ? Color(0xFF10b981) : Color(0xFFf59e0b),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -190,11 +208,17 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                       SizedBox(height: 20),
                       
                       // 문의 정보
+                      _buildInfoRow(Icons.tag, '문의 ID', widget.inquiry.id),
+                      SizedBox(height: 16),
                       _buildInfoRow(Icons.title, '제목', widget.inquiry.title),
                       SizedBox(height: 16),
                       _buildInfoRow(Icons.person, '작성자', widget.inquiry.userID),
                       SizedBox(height: 16),
                       _buildInfoRow(Icons.calendar_today, '문의일자', widget.inquiry.qDate),
+                      if (widget.inquiry.aDate?.isNotEmpty == true) ...[
+                        SizedBox(height: 16),
+                        _buildInfoRow(Icons.schedule, '답변일자', widget.inquiry.aDate!),
+                      ],
                       SizedBox(height: 20),
                       
                       // 구분선
@@ -257,7 +281,7 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
               
               SizedBox(height: 20),
               
-              // 답변 작성 카드
+              // 답변 섹션 카드
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -281,15 +305,21 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Color(0xFF10b981), Color(0xFF059669)],
+                                colors: isCompleted 
+                                  ? [Color(0xFF10b981).withOpacity(0.3), Color(0xFF10b981).withOpacity(0.3)]
+                                  : [Color(0xFFf59e0b).withOpacity(0.3), Color(0xFFf59e0b).withOpacity(0.3)],
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.reply, color: Colors.white, size: 20),
+                            child: Icon(
+                              Icons.reply, 
+                              color: isCompleted ? Color(0xFF10b981) : Color(0xFFf59e0b), 
+                              size: 20
+                            ),
                           ),
                           SizedBox(width: 12),
                           Text(
-                            '답변 작성',
+                            isCompleted ? '답변 내용' : '답변 작성',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -300,11 +330,11 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                       ),
                       SizedBox(height: 20),
                       
-                      // 답변 입력 필드
+                      // 답변 입력/표시 필드
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
+                          boxShadow: widget.isViewMode ? [] : [
                             BoxShadow(
                               color: Colors.grey.withOpacity(0.1),
                               spreadRadius: 1,
@@ -316,94 +346,137 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                         child: TextField(
                           controller: controller,
                           maxLines: 8,
+                          readOnly: widget.isViewMode,
                           style: TextStyle(fontSize: 15, height: 1.5),
                           decoration: InputDecoration(
-                            hintText: '고객에게 전달할 답변을 작성해주세요...',
+                            hintText: widget.isViewMode 
+                              ? (isCompleted ? '' : '답변이 아직 등록되지 않았습니다.')
+                              : '고객에게 전달할 답변을 작성해주세요...',
                             hintStyle: TextStyle(color: Colors.grey[500]),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
+                              borderSide: widget.isViewMode ? BorderSide.none : BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: widget.isViewMode ? BorderSide.none : BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: widget.isViewMode ? BorderSide.none : BorderSide(color: Color(0xFF667eea)),
                             ),
                             filled: true,
-                            fillColor: Color(0xFFF8FAFC),
+                            fillColor: widget.isViewMode 
+                              ? (isCompleted ? Color(0xFFF0FDF4) : Color(0xFFFEF2F2))
+                              : Color(0xFFF8FAFC),
                             contentPadding: EdgeInsets.all(20),
                           ),
                         ),
                       ),
-                      SizedBox(height: 24),
                       
-                      // 답변 등록 버튼
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 52,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [Color(0xFF10b981), Color(0xFF059669)],
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0xFF10b981).withOpacity(0.3),
-                                    spreadRadius: 1,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 4),
+                      // 답변 등록 버튼 (편집 모드이고 답변 미완료일 때만 표시)
+                      if (canEdit) ...[
+                        SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFFf59e0b), Color(0xFFf59e0b)],
                                   ),
-                                ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed: isSubmitting ? null : submitAnswer,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: isSubmitting
-                                  ? Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          '답변 등록 중...',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.send, color: Colors.white, size: 20),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          '답변 등록',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Color(0xFF10b981).withOpacity(0.3),
+                                      spreadRadius: 1,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
                                     ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: isSubmitting ? null : submitAnswer,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: isSubmitting
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Text(
+                                            '답변 등록 중...',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.send, color: Colors.white, size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            '답변 등록',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                      ],
+                      
+                      // 답변 완료 상태 표시 (보기 모드이고 답변 완료일 때)
+                      if (widget.isViewMode && isCompleted) ...[
+                        SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF10b981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFF10b981).withOpacity(0.3)),
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Color(0xFF10b981), size: 20),
+                              SizedBox(width: 12),
+                              Text(
+                                '답변이 완료되었습니다',
+                                style: TextStyle(
+                                  color: Color(0xFF10b981),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

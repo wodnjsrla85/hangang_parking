@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
-import 'package:hangangweb/View/all_inquiry_view.dart';
+import 'package:hangangweb/View/Inquiry/all_inquiry_view.dart';
+import 'package:hangangweb/View/home.dart';
 import 'signup_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -14,10 +15,10 @@ class _LoginViewState extends State<LoginView> {
   final InquiryHandler handler = InquiryHandler();
   final idController = TextEditingController();
   final pwController = TextEditingController();
-  // 주
+  //
   bool isLoading = false;
 
-  // 🔐 로그인 함수 (로직 그대로)
+  // 🔐 로그인 함수
   Future<void> login() async {
     // 빈칸 체크
     if (idController.text.isEmpty || pwController.text.isEmpty) {
@@ -45,7 +46,7 @@ class _LoginViewState extends State<LoginView> {
       );
       
       Navigator.pushReplacement(context, 
-        MaterialPageRoute(builder: (context) => AllInquiryView()));
+        MaterialPageRoute(builder: (context) => Home()));
     } else {
       // 로그인 실패
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,9 +151,9 @@ class _LoginViewState extends State<LoginView> {
                               margin: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                               child: Icon(Icons.person, color: Colors.white, size: 20),
                             ),
@@ -191,7 +192,7 @@ class _LoginViewState extends State<LoginView> {
                               margin: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
