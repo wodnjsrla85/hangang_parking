@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct CommentDetail: View {
     @Binding var selectedContent: ContentJSON          // 선택된 게시글 데이터 바인딩
     @State var commentList: [CommentJSON]              // 댓글 리스트 상태
@@ -24,6 +25,9 @@ struct CommentDetail: View {
     @State var showActions = false                        // 게시글 수정/삭제 옵션 표시 여부
     @State var showDelete = false                         // 삭제 확인 알림 표시 여부
     @State var showUpdate = false                         // 게시글 수정 화면 표시 여부
+    @State var showLoginAlert = false                     // 댓글 로그인 필요 알림 표시 여부
+    @State var showLikeLoginAlert = false                 // 🔄 추가: 좋아요 로그인 알림 표시 여부
+    @State var showLoginPage = false                      // 로그인 페이지 표시 여부
     @Environment(\.dismiss) var dismiss                   // 현재 뷰 닫기 처리
     
     @State var showReply = false                          // 답글 작성 시트 표시 여부
@@ -89,6 +93,26 @@ struct CommentDetail: View {
             Text(errorMessage ?? "알 수 없는 오류가 발생했습니다.")
         }
         
+        // 🔄 추가: 좋아요 로그인 필요 알림창
+        .alert("로그인 필요", isPresented: $showLikeLoginAlert) {
+            Button("로그인하기") {
+                showLoginPage = true  // 로그인 페이지 표시
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("좋아요 기능은 로그인 후 이용 가능합니다.")
+        }
+        
+        // 댓글 로그인 필요 알림창
+        .alert("로그인 필요", isPresented: $showLoginAlert) {
+            Button("로그인하기") {
+                showLoginPage = true
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("댓글을 작성하려면 로그인이 필요합니다.")
+        }
+        
         // 게시글 수정/삭제 액션시트
         .confirmationDialog("옵션 선택", isPresented: $showActions, titleVisibility: .visible) {
             Button("수정") { showUpdate = true }
@@ -107,6 +131,17 @@ struct CommentDetail: View {
         // 게시글 수정 화면 시트
         .sheet(isPresented: $showUpdate) {
             ContentUpdateView(content: $selectedContent)
+        }
+        
+        // 로그인 페이지 시트
+        .sheet(isPresented: $showLoginPage) {
+            LoginView()  // 실제 로그인 뷰로 교체 필요
+                .onDisappear {
+                    // 로그인 완료 후 데이터 새로고침
+                    if userManager.isLoggedIn {
+                        Task { await loadData() }
+                    }
+                }
         }
         
         // 답글 작성 화면 시트
@@ -131,11 +166,10 @@ struct CommentDetail: View {
         print("초기 상태 설정: count=\(likeCount), liked=\(isLiked)")
     }
     
-    // 좋아요 토글 - 단순한 로그인 확인
+    // 🔄 수정: 좋아요 토글 - 로그인 확인 후 alert 표시
     func toggleLike() {
         guard userManager.isLoggedIn else {
-            errorMessage = "좋아요는 로그인 후 이용 가능합니다"
-            showAlert = true
+            showLikeLoginAlert = true  // 🔄 수정: 좋아요 전용 alert 표시
             return
         }
         
@@ -444,6 +478,9 @@ struct CommentDetail: View {
                 onSubmit: {
                     Task { await addComment() }
                     isFocused = false
+                },
+                onLoginRequired: {
+                    showLoginPage = true  // 바로 로그인 페이지 표시
                 }
             )
             .offset(y: keyboardHeight > 0 ? -keyboardHeight + 50 : 0)
@@ -665,19 +702,6 @@ struct ModernPostDetailCard: View {
                 }
                 
                 Spacer()
-                
-//                // 공유 버튼
-//                Button(action: {}) {
-//                    ZStack {
-//                        Circle()
-//                            .fill(Color.green.opacity(0.1))
-//                            .frame(width: 36, height: 36)
-//                        
-//                        Image(systemName: "square.and.arrow.up")
-//                            .foregroundColor(.green)
-//                            .font(.system(size: 16, weight: .semibold))
-//                    }
-//                }
             }
         }
         .padding(24)
@@ -739,7 +763,7 @@ struct ModernCommentHeader: View {
     }
 }
 
-// MARK: - 모던 댓글 카드 (❌ 답글 버튼만 제거)
+// MARK: - 모던 댓글 카드
 struct ModernCommentCard: View {
     let comment: CommentJSON
     let canDelete: Bool
@@ -783,15 +807,6 @@ struct ModernCommentCard: View {
                     
                     // 액션 버튼들
                     HStack(spacing: 8) {
-                        // ❌ 답글 버튼 제거 (주석처리)
-                        // if canReply {
-                        //     Button(action: onReply) {
-                        //         Image(systemName: "arrowshape.turn.up.left")
-                        //             .foregroundColor(.blue)
-                        //             .font(.caption)
-                        //     }
-                        // }
-                        
                         if canDelete {
                             Button(action: onDelete) {
                                 Image(systemName: "trash")
@@ -875,13 +890,20 @@ struct ModernCommentInputBar: View {
     let canSubmit: Bool
     @FocusState var isFocused: Bool
     let onSubmit: () -> Void
+    let onLoginRequired: () -> Void
     
-    init(text: Binding<String>, isLoggedIn: Bool, canSubmit: Bool, isFocused: FocusState<Bool>, onSubmit: @escaping () -> Void) {
+    init(text: Binding<String>,
+         isLoggedIn: Bool,
+         canSubmit: Bool,
+         isFocused: FocusState<Bool>,
+         onSubmit: @escaping () -> Void,
+         onLoginRequired: @escaping () -> Void) {
         self._text = text
         self.isLoggedIn = isLoggedIn
         self.canSubmit = canSubmit
         self._isFocused = isFocused
         self.onSubmit = onSubmit
+        self.onLoginRequired = onLoginRequired
     }
     
     var body: some View {
@@ -933,6 +955,7 @@ struct ModernCommentInputBar: View {
         .background(textFieldBackground)
     }
     
+    // TextField에서 disabled 제거하고 onChange 추가
     private var textFieldView: some View {
         TextField(
             isLoggedIn ? "댓글을 입력하세요..." : "로그인 후 댓글을 작성할 수 있어요",
@@ -940,8 +963,16 @@ struct ModernCommentInputBar: View {
         )
         .font(.body)
         .focused($isFocused)
-        .disabled(!isLoggedIn)
         .foregroundColor(isLoggedIn ? .primary : .secondary)
+        .onChange(of: isFocused) { focused in
+            // 포커스가 갔을 때 로그인 체크
+            if focused && !isLoggedIn {
+                // 포커스 해제
+                isFocused = false
+                // 로그인 페이지 표시
+                onLoginRequired()
+            }
+        }
     }
     
     private var sendButtonView: some View {
@@ -1006,7 +1037,7 @@ struct CommentLoadingOverlay: View {
     }
 }
 
-// MARK: - 답글 작성 시트 (기존 이름 유지)
+// MARK: - 답글 작성 시트
 struct CommentReplySheet: View {
     let originalComment: CommentJSON?
     @Binding var replyText: String

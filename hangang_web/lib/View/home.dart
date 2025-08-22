@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hangangweb/View/Inquiry/all_inquiry_view.dart';
+import 'package:hangangweb/View/community_admin_view.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -20,11 +21,18 @@ class _HomeState extends State<Home> {
             TextButton(
               onPressed: () {
                 Get.to(AllInquiryView());
-              }, 
-              child: Text("문의 관리 페이지로 이동")
+              },
+              child: Text("문의 관리 페이지로 이동"),
             ),
             // 버스킹 관리 페이지이동
+
             // 게시판 관리 페이지이동
+            TextButton(
+              onPressed: () {
+                Get.to(() => (CommunityAdminView()));
+              },
+              child: Text("커뮤니티 관리 페이지로 이동"),
+            ),
           ],
         ),
       ),

@@ -241,7 +241,7 @@ struct FountainScheduleView: View {
             VStack(spacing: 20) {
                 // 제목 카드
                 InfoCard(
-                    icon: "cloud.rainbow.crop",
+                    icon: "drop.fill",
                     iconColor: .blue,
                     title: "무지개분수 운영 안내",
                     subtitle: "한강공원 무지개분수의 상세 운영 일정을 확인하세요"
@@ -455,7 +455,7 @@ struct NoticeCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(.orange)
                 
                 Text("운영 중지 조건")
                     .font(.headline)
@@ -467,13 +467,13 @@ struct NoticeCard: View {
                 .foregroundColor(.secondary)
                 .lineLimit(nil)
         }
-        .padding(30)
+        .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.red.opacity(0.1))
+                .fill(Color.orange.opacity(0.1))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
     }
