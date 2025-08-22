@@ -43,11 +43,6 @@ struct InquiryDetail: View {
                         WaitingForAnswerSection()
                     }
                     
-                    // 액션 버튼들
-                    ActionButtonsSection(
-                        inquiry: inquiry,
-                        showingShareSheet: $showingShareSheet
-                    )
                     
                     Spacer(minLength: 100) // 탭바 공간 확보
                 }
@@ -57,9 +52,6 @@ struct InquiryDetail: View {
         }
         .navigationTitle("문의 상세")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingShareSheet) {
-            ShareInquiryView(inquiry: inquiry)
-        }
     }
 }
 
@@ -179,14 +171,14 @@ struct InquiryMetaSection: View {
                     icon: "calendar",
                     label: "작성일",
                     value: inquiry.qdate ?? "날짜 미확인",
-                    color: .green
+                    color: .blue
                 )
                 
                 MetaInfoRow(
                     icon: "checkmark.seal.fill",
                     label: "처리상태",
                     value: inquiry.displayState,
-                    color: inquiry.isAnswered ? .green : .orange
+                    color: .blue
                 )
                 
                 if inquiry.isAnswered, let adate = inquiry.adate {
@@ -194,7 +186,7 @@ struct InquiryMetaSection: View {
                         icon: "clock.arrow.circlepath",
                         label: "답변일",
                         value: adate,
-                        color: .green
+                        color: .blue
                     )
                 }
             }
@@ -346,36 +338,6 @@ struct WaitingForAnswerSection: View {
     }
 }
 
-// MARK: - 액션 버튼들
-struct ActionButtonsSection: View {
-    let inquiry: Inquiry
-    @Binding var showingShareSheet: Bool
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            // 문의 공유 버튼
-            ModernActionButton(
-                icon: "square.and.arrow.up",
-                title: "문의 내용 공유",
-                color: .blue,
-                style: .filled
-            ) {
-                showingShareSheet = true
-            }
-            
-            // 새 문의 작성 버튼
-            ModernActionButton(
-                icon: "plus.message.fill",
-                title: "새 문의 작성",
-                color: .green,
-                style: .outlined
-            ) {
-                // 새 문의 작성 액션
-                print("새 문의 작성")
-            }
-        }
-    }
-}
 
 // MARK: - 공통 컴포넌트들
 
@@ -515,71 +477,4 @@ struct ModernActionButton: View {
     }
 }
 
-// MARK: - 공유 시트
-struct ShareInquiryView: View {
-    let inquiry: Inquiry
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                // 공유 내용 미리보기
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("공유할 내용")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    
-                    Text(shareText)
-                        .font(.body)
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(12)
-                }
-                .padding()
-                
-                Spacer()
-                
-                // 공유 버튼
-                Button("공유하기") {
-                    shareInquiry()
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
-                .padding()
-            }
-            .navigationTitle("문의 공유")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("닫기") { dismiss() })
-        }
-    }
-    
-    private var shareText: String {
-        """
-        [한강공원 문의사항]
-        
-        제목: \(inquiry.safeTitle)
-        내용: \(inquiry.safeContent)
-        작성일: \(inquiry.qdate ?? "날짜 미확인")
-        상태: \(inquiry.displayState)
-        """
-    }
-    
-    private func shareInquiry() {
-        let activityVC = UIActivityViewController(
-            activityItems: [shareText],
-            applicationActivities: nil
-        )
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityVC, animated: true)
-        }
-        
-        dismiss()
-    }
-}
 

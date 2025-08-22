@@ -63,7 +63,8 @@ async def update_inquiry(inquiry_id: str, inquiry: InquiryUpdate):
         {"$set": inquiry.dict(exclude_unset=True)}
     )
 
-    if result.modified_count == 1:
+    # 🔑 수정된 경우 OR 기존 값과 동일한 경우 → 둘 다 성공 처리
+    if result.modified_count == 1 or result.matched_count == 1:
         return {"result": "OK"}
     else:
         raise HTTPException(status_code=404, detail="Inquiry not found")

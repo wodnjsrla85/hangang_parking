@@ -127,7 +127,7 @@ struct InquiryCreate: Codable {
         self.title = title
         self.content = content
         self.qdate = DateFormatter.serverDateFormatter.string(from: Date())
-        self.state = "pending"
+        self.state = "답변대기"
     }
 }
 

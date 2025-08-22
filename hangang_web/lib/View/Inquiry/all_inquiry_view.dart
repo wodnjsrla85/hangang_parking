@@ -6,7 +6,7 @@ import '../../Model/inquiry.dart';
 import 'answer_inquiry.dart';
 
 class AllInquiryView extends StatefulWidget {
-  const AllInquiryView({super.key});
+  AllInquiryView({super.key});
 
   @override
   State<AllInquiryView> createState() => _AllInquiryViewState();
@@ -36,7 +36,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
         return handler.inquiries.where((inquiry) => inquiry.state != '답변완료').toList();
       case '답변완료':
         return handler.inquiries.where((inquiry) => inquiry.state == '답변완료').toList();
-      default: // '전체'
+      default:
         return handler.inquiries;
     }
   }
@@ -90,8 +90,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.account_circle, 
-                  color: Color(0xFF667eea), size: 16),
+                Icon(Icons.account_circle, color: Color(0xFF667eea), size: 16),
                 SizedBox(width: 6),
                 Text(
                   '${handler.currentAdmin?.id ?? "관리자"}',
@@ -104,7 +103,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
               ],
             ),
           ),
-          SizedBox(width: 10,),
+          SizedBox(width: 10),
           // 새로고침 버튼
           Container(
             margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -123,7 +122,6 @@ class _AllInquiryViewState extends State<AllInquiryView> {
               tooltip: '새로고침',
             ),
           ),
-          
           // 로그아웃 버튼
           Container(
             margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -168,7 +166,6 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                     ],
                   ),
                 );
-                
                 if (result == true) {
                   await handler.adminLogout();
                   Get.offAll(() => LoginView());
@@ -190,226 +187,185 @@ class _AllInquiryViewState extends State<AllInquiryView> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [  
-                // 카테고리 버튼들
-                Row(
-                  children: [
-                    _buildCategoryButton('전체', totalCount, Icons.list, Color(0xFF667eea)),
-                    SizedBox(width: 12),
-                    _buildCategoryButton('답변대기', pendingCount, Icons.schedule, Color(0xFFf59e0b)),
-                    SizedBox(width: 12),
-                    _buildCategoryButton('답변완료', completedCount, Icons.check_circle, Color(0xFF10b981)),
-                  ],
-                ),
+            child: Row(
+              children: [
+                _buildCategoryButton('전체', totalCount, Icons.list, Color(0xFF667eea)),
+                SizedBox(width: 12),
+                _buildCategoryButton('답변대기', pendingCount, Icons.schedule, Color(0xFFf59e0b)),
+                SizedBox(width: 12),
+                _buildCategoryButton('답변완료', completedCount, Icons.check_circle, Color(0xFF10b981)),
               ],
             ),
           ),
-          
           // 문의 목록 섹션
           Expanded(
             child: Container(
               margin: EdgeInsets.only(left: 20, right: 20, bottom: 20),
               child: isLoading
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
-                          strokeWidth: 3,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          '문의 목록을 불러오는 중...',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : filteredInquiries.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.inbox_outlined,
-                            size: 80,
-                            color: Colors.grey[400],
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
+                            strokeWidth: 3,
                           ),
                           SizedBox(height: 16),
                           Text(
-                            selectedCategory == '전체' 
-                              ? '등록된 문의가 없습니다'
-                              : '$selectedCategory 문의가 없습니다',
+                            '문의 목록을 불러오는 중...',
                             style: TextStyle(
-                              fontSize: 18,
                               color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '새로운 문의가 등록되면 여기에 표시됩니다',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
+                              fontSize: 16,
                             ),
                           ),
                         ],
                       ),
                     )
-                  : Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.grey.shade200),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                  : filteredInquiries.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+                              SizedBox(height: 16),
+                              Text(
+                                selectedCategory == '전체'
+                                    ? '등록된 문의가 없습니다'
+                                    : '$selectedCategory 문의가 없습니다',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                '새로운 문의가 등록되면 여기에 표시됩니다',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Card(
                           color: Colors.white,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 헤더
-                            Container(
-                              padding: EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFF667eea).withOpacity(0.1),
-                                    Color(0xFF667eea).withOpacity(0.1),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 헤더
+                              Container(
+                                padding: EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(0xFF667eea).withOpacity(0.1),
+                                      Color(0xFF667eea).withOpacity(0.1),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    topRight: Radius.circular(16),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.list_alt, color: Color(0xFF667eea), size: 24),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      '$selectedCategory 문의 목록',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2D3748),
+                                      ),
+                                    ),
+                                    Spacer(),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFF667eea),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '${filteredInquiries.length}건',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
-                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.list_alt, 
-                                    color: Color(0xFF667eea), size: 24),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    '$selectedCategory 문의 목록',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D3748),
-                                    ),
-                                  ),
-                                  Spacer(),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFF667eea),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '${filteredInquiries.length}건',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            
-                            // 스크롤 가능한 테이블
-                            Expanded(
-                              child: SingleChildScrollView(
+                              // 스크롤 가능한 테이블
+                              Expanded(
                                 child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      minWidth: MediaQuery.of(context).size.width - 80,
-                                    ),
-                                    child: DataTable(
-                                      columnSpacing: 24,
-                                      horizontalMargin: 20,
-                                      headingRowHeight: 56,
-                                      dataRowHeight: 72,
-                                      showCheckboxColumn: false, // 체크박스 열 숨기기
-                                      headingRowColor: MaterialStateProperty.all(
-                                        Color(0xFFF8FAFC),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minWidth: MediaQuery.of(context).size.width - 40,
+                                        maxWidth: MediaQuery.of(context).size.width - 40,
                                       ),
-                                      columns: [
-                                        DataColumn(
-                                          label: _buildColumnHeader('순서', Icons.numbers),
-                                        ),
-                                        DataColumn(
-                                          label: _buildColumnHeader('제목', Icons.title),
-                                        ),
-                                        DataColumn(
-                                          label: _buildColumnHeader('작성자', Icons.person),
-                                        ),
-                                        DataColumn(
-                                          label: _buildColumnHeader('문의일자', Icons.calendar_today),
-                                        ),
-                                        DataColumn(
-                                          label: _buildColumnHeader('상태', Icons.info),
-                                        ),
-                                        DataColumn(
-                                          label: _buildColumnHeader('작업', Icons.settings),
-                                        ),
-                                      ],
-                                      rows: List.generate(filteredInquiries.length, (index) {
-                                        final inquiry = filteredInquiries[index];
-                                        return DataRow(
-                                          color: MaterialStateProperty.resolveWith<Color?>(
-                                            (Set<MaterialState> states) {
-                                              if (states.contains(MaterialState.hovered)) {
-                                                return Color(0xFF667eea).withOpacity(0.05);
-                                              }
-                                              return index % 2 == 0 
-                                                ? Colors.grey.shade50 
-                                                : Colors.white;
-                                            },
-                                          ),
-                                          cells: [
-                                            DataCell(
-                                              _buildCellContent('${index + 1}'),
-                                              onTap: () => _navigateToInquiry(inquiry),
+                                      child: DataTable(
+                                        columnSpacing: 24,
+                                        horizontalMargin: 30,
+                                        headingRowHeight: 56,
+                                        dataRowHeight: 72,
+                                        showCheckboxColumn: false,
+                                        headingRowColor: MaterialStateProperty.all(Color(0xFFF8FAFC)),
+                                        columns: [
+                                          DataColumn(label: _buildColumnHeader('순서', Icons.numbers)),
+                                          DataColumn(label: _buildColumnHeader('제목', Icons.title)),
+                                          DataColumn(label: _buildColumnHeader('작성자', Icons.person)),
+                                          DataColumn(label: _buildColumnHeader('문의일자', Icons.calendar_today)),
+                                          DataColumn(label: _buildColumnHeader('상태', Icons.info)),
+                                          DataColumn(label: _buildColumnHeader('보기', Icons.question_answer)),
+                                        ],
+                                        rows: List.generate(filteredInquiries.length, (index) {
+                                          final inquiry = filteredInquiries[index];
+                                          return DataRow(
+                                            color: MaterialStateProperty.resolveWith<Color?>(
+                                              (Set<MaterialState> states) {
+                                                if (states.contains(MaterialState.hovered)) {
+                                                  return Color(0xFF667eea).withOpacity(0.05);
+                                                }
+                                                return index % 2 == 0
+                                                    ? Colors.grey.shade50
+                                                    : Colors.white;
+                                              },
                                             ),
-                                            DataCell(
-                                              _buildTitleCell(inquiry.title),
-                                              onTap: () => _navigateToInquiry(inquiry),
-                                            ),
-                                            DataCell(
-                                              _buildCellContent(inquiry.userID),
-                                              onTap: () => _navigateToInquiry(inquiry),
-                                            ),
-                                            DataCell(
-                                              _buildCellContent(inquiry.qDate),
-                                              onTap: () => _navigateToInquiry(inquiry),
-                                            ),
-                                            DataCell(
-                                              _buildStatusCell(inquiry.state),
-                                              onTap: () => _navigateToInquiry(inquiry),
-                                            ),
-                                            DataCell(_buildActionCell(inquiry, index)),
-                                          ],
-                                        );
-                                      }),
+                                            cells: [
+                                              DataCell(_buildCellContent('${index + 1}'),
+                                                  onTap: () => getToInquiry(inquiry)),
+                                              DataCell(_buildTitleCell(inquiry.title),
+                                                  onTap: () => getToInquiry(inquiry)),
+                                              DataCell(_buildCellContent(inquiry.userID),
+                                                  onTap: () => getToInquiry(inquiry)),
+                                              DataCell(_buildCellContent(inquiry.qDate),
+                                                  onTap: () => getToInquiry(inquiry)),
+                                              DataCell(_buildStatusCell(inquiry.state),
+                                                  onTap: () => getToInquiry(inquiry)),
+                                              DataCell(_buildActionCell(inquiry, index)),
+                                            ],
+                                          );
+                                        }),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ),
         ],
@@ -417,17 +373,14 @@ class _AllInquiryViewState extends State<AllInquiryView> {
     );
   }
 
-  // 문의로 이동하는 함수 (답변완료/미완료에 따라 다른 모드)
-  void _navigateToInquiry(Inquiry inquiry) async {
+  void getToInquiry(Inquiry inquiry) async {
     final result = await Get.to(
       () => AnswerInquiry(
         inquiry: inquiry,
         handler: handler,
-        isViewMode: inquiry.state == '답변완료', // 답변완료면 보기모드, 아니면 편집모드
+        isViewMode: inquiry.state == '답변완료',
       ),
     );
-    
-    // 답변을 완료했다면 목록 새로고침
     if (result == true) {
       setState(() => isLoading = true);
       await loadInquiries();
@@ -436,7 +389,6 @@ class _AllInquiryViewState extends State<AllInquiryView> {
 
   Widget _buildCategoryButton(String category, int count, IconData icon, Color color) {
     bool isSelected = selectedCategory == category;
-    
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -454,21 +406,19 @@ class _AllInquiryViewState extends State<AllInquiryView> {
               color: isSelected ? color : color.withOpacity(0.3),
               width: isSelected ? 2 : 1,
             ),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ] : [],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
           child: Column(
             children: [
-              Icon(
-                icon,
-                color: isSelected ? Colors.white : color,
-                size: 24,
-              ),
+              Icon(icon, color: isSelected ? Colors.white : color, size: 24),
               SizedBox(height: 8),
               Text(
                 category,
@@ -553,7 +503,6 @@ class _AllInquiryViewState extends State<AllInquiryView> {
     Color statusColor;
     Color bgColor;
     IconData statusIcon;
-    
     switch (status) {
       case '답변완료':
         statusColor = Color(0xFF10b981);
@@ -565,7 +514,6 @@ class _AllInquiryViewState extends State<AllInquiryView> {
         bgColor = Color(0xFFf59e0b).withOpacity(0.1);
         statusIcon = Icons.help;
     }
-
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -594,25 +542,24 @@ class _AllInquiryViewState extends State<AllInquiryView> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 보기/편집 버튼
         Container(
           decoration: BoxDecoration(
-            color: inquiry.state == '답변완료' 
-              ? Color(0xFF10b981).withOpacity(0.1)
-              : Color(0xFF667eea).withOpacity(0.1),
+            color: inquiry.state == '답변완료'
+                ? Color(0xFF10b981).withOpacity(0.1)
+                : Color(0xFF667eea).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: inquiry.state == '답변완료'
-                ? Color(0xFF10b981).withOpacity(0.3)
-                : Color(0xFF667eea).withOpacity(0.3)
+                  ? Color(0xFF10b981).withOpacity(0.3)
+                  : Color(0xFF667eea).withOpacity(0.3),
             ),
           ),
           child: IconButton(
-            onPressed: () => _navigateToInquiry(inquiry),
+            onPressed: () => getToInquiry(inquiry),
             icon: Icon(
               inquiry.state == '답변완료' ? Icons.article : Icons.edit,
               color: inquiry.state == '답변완료' ? Color(0xFF10b981) : Color(0xFF667eea),
-              size: 16
+              size: 16,
             ),
             tooltip: inquiry.state == '답변완료' ? '답변 보기' : '답변하기',
             constraints: BoxConstraints(minWidth: 36, minHeight: 36),

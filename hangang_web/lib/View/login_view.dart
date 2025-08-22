@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // ✅ GetX 추가
 import 'package:hangangweb/VM/inquiryHandler.dart';
-import 'package:hangangweb/View/Inquiry/all_inquiry_view.dart';
 import 'package:hangangweb/View/home.dart';
 import 'signup_view.dart';
 
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
-
   @override
   State<LoginView> createState() => _LoginViewState();
 }
@@ -15,16 +13,14 @@ class _LoginViewState extends State<LoginView> {
   final InquiryHandler handler = InquiryHandler();
   final idController = TextEditingController();
   final pwController = TextEditingController();
-  //
+
   bool isLoading = false;
 
   // 🔐 로그인 함수
   Future<void> login() async {
-    // 빈칸 체크
     if (idController.text.isEmpty || pwController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('아이디와 비밀번호를 입력하세요'))
-      );
+      Get.snackbar("오류", "아이디와 비밀번호를 입력하세요",
+          snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
@@ -32,29 +28,23 @@ class _LoginViewState extends State<LoginView> {
       isLoading = true;
     });
 
-    // 로그인 시도
-    bool success = await handler.adminLogin(idController.text, pwController.text);
+    bool success = await handler.adminLogin(
+        idController.text, pwController.text);
 
     setState(() {
       isLoading = false;
     });
 
     if (success) {
-      // 로그인 성공 → 문의 목록으로
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('로그인 성공!'))
-      );
-      
-      Navigator.pushReplacement(context, 
-        MaterialPageRoute(builder: (context) => Home()));
+      Get.snackbar("성공", "로그인 성공!",
+          snackPosition: SnackPosition.BOTTOM);
+      // ✅ GetX 라우팅
+      Get.offAll(() => Home());
     } else {
-      // 로그인 실패
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('아이디 또는 비밀번호가 틀렸습니다'),
+      Get.snackbar("실패", "아이디 또는 비밀번호가 틀렸습니다",
+          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
-        )
-      );
+          colorText: Colors.white);
     }
   }
 
@@ -67,10 +57,7 @@ class _LoginViewState extends State<LoginView> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
           ),
         ),
         child: Center(
@@ -102,11 +89,8 @@ class _LoginViewState extends State<LoginView> {
                           ),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.admin_panel_settings,
-                          size: 40,
-                          color: Colors.white,
-                        ),
+                        child: Icon(Icons.admin_panel_settings,
+                            size: 40, color: Colors.white),
                       ),
                       SizedBox(height: 30),
 
@@ -128,7 +112,7 @@ class _LoginViewState extends State<LoginView> {
                         ),
                       ),
                       SizedBox(height: 40),
-                      
+
                       // 아이디 입력
                       Container(
                         decoration: BoxDecoration(
@@ -151,11 +135,11 @@ class _LoginViewState extends State<LoginView> {
                               margin: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
-                                ),
+                                    colors: [Color(0xFF667eea), Color(0xFF667eea)]),
                                 borderRadius: BorderRadius.circular(30),
                               ),
-                              child: Icon(Icons.person, color: Colors.white, size: 20),
+                              child: Icon(Icons.person,
+                                  color: Colors.white, size: 20),
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -163,12 +147,13 @@ class _LoginViewState extends State<LoginView> {
                             ),
                             filled: true,
                             fillColor: Color(0xFFF7FAFC),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 18),
                           ),
                         ),
                       ),
                       SizedBox(height: 25),
-                      
+
                       // 비밀번호 입력
                       Container(
                         decoration: BoxDecoration(
@@ -192,11 +177,11 @@ class _LoginViewState extends State<LoginView> {
                               margin: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
-                                ),
+                                    colors: [Color(0xFF667eea), Color(0xFF667eea)]),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.lock, color: Colors.white, size: 20),
+                              child: Icon(Icons.lock,
+                                  color: Colors.white, size: 20),
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -204,12 +189,13 @@ class _LoginViewState extends State<LoginView> {
                             ),
                             filled: true,
                             fillColor: Color(0xFFF7FAFC),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 18),
                           ),
                         ),
                       ),
                       SizedBox(height: 35),
-                      
+
                       // 로그인 버튼
                       Container(
                         width: double.infinity,
@@ -237,55 +223,54 @@ class _LoginViewState extends State<LoginView> {
                               borderRadius: BorderRadius.circular(15),
                             ),
                           ),
-                          child: isLoading 
-                            ? SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+                          child: isLoading
+                              ? SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  "로그인",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              )
-                            : Text(
-                                "로그인",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
                         ),
                       ),
                       SizedBox(height: 30),
-                      
+
                       // 구분선
                       Row(
                         children: [
                           Expanded(child: Divider(color: Colors.grey[300])),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              "또는",
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
+                            child: Text("또는",
+                                style: TextStyle(color: Colors.grey[600])),
                           ),
                           Expanded(child: Divider(color: Colors.grey[300])),
                         ],
                       ),
                       SizedBox(height: 25),
-                      
+
                       // 회원가입 버튼
                       Container(
                         width: double.infinity,
                         height: 55,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Color(0xFF667eea), width: 2),
+                          border:
+                              Border.all(color: Color(0xFF667eea), width: 2),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: TextButton(
                           onPressed: () {
-                            Navigator.push(context, 
-                              MaterialPageRoute(builder: (context) => SignupView()));
+                            // ✅ GetX 라우팅
+                            Get.to(() => SignupView());
                           },
                           style: TextButton.styleFrom(
                             shape: RoundedRectangleBorder(
