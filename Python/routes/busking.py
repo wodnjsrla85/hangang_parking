@@ -68,14 +68,14 @@ async def insert(busking: busking):
     await collection_busking.insert_one(data)
     return {'result': 'OK'}
 
-@router.put('/busking/update/{userid}')
-async def update(userid: str, busking: buskingUpdate):
+@router.put('/busking/update/{id}')
+async def update(id: str, busking: buskingUpdate):
     # 부분 업데이트 (image 제외)
     data = busking.dict(exclude_unset=True)
     if not data:
         raise HTTPException(status_code=400, detail='No Field For Update')
 
-    result = await collection_busking.update_one({'userid': userid}, {'$set': data})
+    result = await collection_busking.update_one({'userid': id}, {'$set': data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail='busking Not Found')
     return {'result': 'OK'}
