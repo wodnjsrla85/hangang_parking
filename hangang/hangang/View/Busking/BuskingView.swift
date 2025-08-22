@@ -81,7 +81,7 @@ struct BuskingView: View {
                         // 신청 버튼
                         Button {
                             if userManager.currentUserID.isEmpty{
-                                goInquiry = true
+ 
                                 showLoginAlert = true
                                 
                             } else {
@@ -183,7 +183,7 @@ struct BuskingView: View {
     }
 }
 
-#Preview {
-    BuskingView()
-        .environmentObject(UserManager.shared)
-}
+//#Preview {
+//    BuskingView()
+//        .environmentObject(UserManager.shared)
+//}

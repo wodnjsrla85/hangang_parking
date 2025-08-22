@@ -212,7 +212,7 @@ struct InfoRow2: View {
     }
 }
 
-#Preview {
-    BuskingStatusView()
-        .environmentObject(UserManager.shared)
-}
+//#Preview {
+//    BuskingStatusView()
+//        .environmentObject(UserManager.shared)
+//}

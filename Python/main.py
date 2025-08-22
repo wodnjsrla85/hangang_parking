@@ -228,7 +228,7 @@ if __name__ == '__main__':
     print("   - API 정보: http://127.0.0.1:8000/api/info")
     print("=" * 50)
     print("📱 클라이언트 접속:")
-    print("   - Flutter Web (관리자): http://localhost:port")
+    print("   - Flutter Web (관리자): http://127.0.0.1:8000")
     print("   - iOS 앱: http://127.0.0.1:8000")
     print("=" * 50)
     print("⚡ 서버를 시작합니다...")

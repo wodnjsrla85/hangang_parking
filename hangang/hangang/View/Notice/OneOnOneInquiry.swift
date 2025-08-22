@@ -256,7 +256,7 @@ struct UserInfoCard: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                 
-                Text(userManager.isLoggedIn ? "\(userManager.currentUserID ?? "")님" : "로그인이 필요합니다")
+                Text(userManager.isLoggedIn ? "\(userManager.currentUserID)님" : "로그인이 필요합니다")
                     .font(.caption)
                     .foregroundColor(userManager.isLoggedIn ? .green : .red)
             }
@@ -319,7 +319,7 @@ struct ModernInputField: View {
                 Spacer()
                 
                 // 글자 수 표시
-                Text("\(text.count)/100")
+                Text("\(text.count)/30")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
