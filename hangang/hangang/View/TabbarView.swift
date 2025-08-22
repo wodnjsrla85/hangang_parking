@@ -20,22 +20,26 @@ struct TabbarView: View {
                     TabView(selection: $tabCurrent) {
                         NavigationView {
                             MainView()
+                                .environmentObject(userManager)
                         }
                         .tag(0)
                         .ignoresSafeArea()
 
                         NavigationView {
                             NoticeView()
+                                .environmentObject(userManager)
                         }
                         .tag(1)
 
                         NavigationView {
                             BuskingView()
+                                .environmentObject(userManager)
                         }
                         .tag(2)
 
                         NavigationView {
                             CommunityView()
+                                .environmentObject(userManager)
                         }
                         .tag(3)
                     }
