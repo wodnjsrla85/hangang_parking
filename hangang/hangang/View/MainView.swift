@@ -823,6 +823,8 @@ struct CategoryListItem: View {
 }
 
 #Preview {
-    MainView()
-        .environmentObject(UserManager.shared)
+    NavigationView(content: {
+        MainView()
+            .environmentObject(UserManager.shared)
+    })
 }

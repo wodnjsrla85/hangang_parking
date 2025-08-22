@@ -30,7 +30,6 @@ struct ContentAddView: View {
         userManager.currentUserID
     }
     
-    
     var buttonEnabled: Bool {
         // 디버깅을 위한 상태 출력
         let hasContent = !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -43,110 +42,389 @@ struct ContentAddView: View {
     }
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            // 내용 입력 헤더
-            HStack {
-                Text("내용").font(.title).bold().padding(.horizontal, 20)
-                Spacer()
-            }
-            
-            // 내용 입력 필드 (TextEditor)
-            TextEditor(text: $content)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .colorMultiply(.blue.opacity(0.2))
-                .clipShape(.rect(cornerRadius: 10))
-                .focused($isFocused)
-            
-            // 사진 첨부 헤더
-            HStack {
-                Text("사진").font(.title).bold().padding(.horizontal, 20)
-                Spacer()
-            }
-            
-            // 사진 선택 및 미리보기 UI
-            HStack {
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    Text("+").frame(width: 70, height: 100)
-                        .font(.system(size: 50))
-                        .background(.orange)
-                        .foregroundStyle(.white)
-                        .clipShape(.buttonBorder)
-                }
-                .padding()
-                
-                // 선택된 이미지 미리보기
-                if let img = image {
-                    Image(uiImage: img)
-                        .resizable().scaledToFit()
-                        .frame(width: 100, height: 100)
-                        .clipShape(.rect(cornerRadius: 10))
-                        .padding()
-                }
-                
-                Spacer()
-            }
-            
-            // 수정: 작성 완료 버튼 - 즉시 상태 업데이트 적용 + 디버깅 로그 추가
-            Button(uploading ? "작성 중..." : "작성 완료") {
-                print("🎯 작성 완료 버튼 클릭됨")
-                print("   - uploading: \(uploading)")
-                print("   - content: '\(content)'")
-                print("   - userId: '\(userId)'")
-                print("   - buttonEnabled: \(buttonEnabled)")
-                
-                // 즉시 상태 업데이트로 중복 클릭 방지
-                if !uploading {  // 추가 안전장치
-                    uploading = true
-                    
-                    // 즉시 햅틱 피드백
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
-                    
-                    Task {
-                        await writePost()
-                    }
-                }
-            }
-            .frame(width: 300, height: 50)
-            .background(buttonEnabled ? .blue : .gray)
-            .foregroundStyle(.white)
-            .clipShape(.rect(cornerRadius: 30))
-            .font(.title3).bold()
-            .disabled(!buttonEnabled)
+        ZStack {
+            backgroundView
+            mainContentView
         }
-        .navigationTitle("게시글 작성")
-        .navigationBarTitleDisplayMode(.inline)
-        
-        // \ 추가: 뷰 진입 시 상태 초기화 및 디버깅 로그
+        .navigationTitle("")
+        .navigationBarHidden(true)
+        .safeAreaInset(edge: .top) {
+            modernNavigationBar
+        }
         .onAppear {
-            print("ContentAddView 나타남")
-            print("   - userManager.isLoggedIn: \(userManager.isLoggedIn)")
-            print("   - userManager.currentUserID: '\(userManager.currentUserID)'")
-            
-            // 상태 초기화
-            uploading = false
-            content = ""
-            alertMessage = ""
-            showAlert = false
+            setupInitialState()
         }
-        
-        // 사진 선택 변경 시 이미지 로딩 처리 (주석 처리된 부분 - 필요시 활성화)
-        /*
-        .onChange(of: photoItem) { _, newItem in
-            Task { await loadImage(from: newItem) }
-        }
-        */
-        
-        // 알림창 표시
         .alert("알림", isPresented: $showAlert) {
             Button("확인", role: .cancel) { }
         } message: {
             Text(alertMessage)
         }
-        // 배경 탭 시 키보드 내리기
-        .onTapGesture { isFocused = false }
+        .onTapGesture {
+            isFocused = false
+        }
+    }
+    
+    // MARK: - View Components
+    private var backgroundView: some View {
+        LinearGradient(
+            colors: [
+                Color(.systemBackground),
+                Color(.systemGray6).opacity(0.3)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+    
+    private var mainContentView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                headerCardView
+                contentInputSection
+                photoSection
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+        }
+        .overlay(alignment: .bottom) {
+            submitButtonView
+        }
+    }
+    
+    private var modernNavigationBar: some View {
+        HStack {
+            // 취소 버튼
+            Button(action: { dismiss() }) {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+            
+            Spacer()
+            
+            // 타이틀
+            Text("새 게시글")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            // 빈 공간 (대칭을 위해)
+            Circle()
+                .fill(Color.clear)
+                .frame(width: 40, height: 40)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+    }
+    
+    private var headerCardView: some View {
+        VStack(spacing: 16) {
+            // 아이콘과 제목
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.purple.opacity(0.3), .blue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: "square.and.pencil")
+                        .foregroundColor(.purple)
+                        .font(.title2)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("게시글 작성")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("한강에서의 이야기를 들려주세요")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
+    }
+    
+    private var contentInputSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // 섹션 헤더
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.blue.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "text.alignleft")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                
+                Text("내용")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                // 글자수 카운터
+                Text("\(content.count)/1000")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.gray.opacity(0.1))
+                    )
+            }
+            
+            // 텍스트 에디터
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isFocused ? Color.blue.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .frame(minHeight: 200)
+                    .animation(.easeInOut(duration: 0.2), value: isFocused)
+                
+                TextEditor(text: $content)
+                    .font(.body)
+                    .padding(16)
+                    .background(Color.clear)
+                    .focused($isFocused)
+                    .scrollContentBackground(.hidden)
+                
+                if content.isEmpty && !isFocused {
+                    Text("한강에서의 추억이나 경험을 공유해주세요...")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 24)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+    
+    private var photoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // 섹션 헤더
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "photo")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                
+                Text("사진")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text("(선택사항)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+            }
+            
+            // 사진 선택 영역
+            HStack(spacing: 16) {
+                // 사진 추가 버튼
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(LinearGradient(
+                                    colors: [.orange.opacity(0.2), .orange.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 80, height: 80)
+                            
+                            VStack(spacing: 4) {
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .foregroundColor(.orange)
+                                
+                                Text("사진")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // 선택된 이미지 미리보기
+                if let img = image {
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        // 삭제 버튼
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                image = nil
+                                photoItem = nil
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(.red)
+                                    .frame(width: 24, height: 24)
+                                
+                                Image(systemName: "xmark")
+                                    .foregroundColor(.white)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                            }
+                        }
+                        .offset(x: 8, y: -8)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+                
+                Spacer()
+            }
+        }
+    }
+    
+    private var submitButtonView: some View {
+        VStack(spacing: 0) {
+            // 그라데이션 분리선
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.1), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
+            
+            // 버튼 영역
+            VStack(spacing: 16) {
+                // 상태 표시
+                if uploading {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("게시글을 작성하는 중...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 16)
+                }
+                
+                // 제출 버튼
+                Button(action: handleSubmit) {
+                    HStack(spacing: 12) {
+                        if uploading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        
+                        Text(uploading ? "작성 중..." : "게시글 올리기")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                buttonEnabled ?
+                                LinearGradient(colors: [.blue, .cyan], startPoint: .leading, endPoint: .trailing) :
+                                LinearGradient(colors: [.gray.opacity(0.5)], startPoint: .leading, endPoint: .trailing)
+                            )
+                    )
+                    .shadow(
+                        color: buttonEnabled ? .blue.opacity(0.3) : .clear,
+                        radius: 8, x: 0, y: 4
+                    )
+                    .scaleEffect(buttonEnabled ? 1.0 : 0.95)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: buttonEnabled)
+                }
+                .disabled(!buttonEnabled)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
+            .background(.ultraThinMaterial)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func setupInitialState() {
+        print("ContentAddView 나타남")
+        print("   - userManager.isLoggedIn: \(userManager.isLoggedIn)")
+        print("   - userManager.currentUserID: '\(userManager.currentUserID)'")
+        
+        // 상태 초기화
+        uploading = false
+        content = ""
+        alertMessage = ""
+        showAlert = false
+    }
+    
+    private func handleSubmit() {
+        print("🎯 작성 완료 버튼 클릭됨")
+        print("   - uploading: \(uploading)")
+        print("   - content: '\(content)'")
+        print("   - userId: '\(userId)'")
+        print("   - buttonEnabled: \(buttonEnabled)")
+        
+        // 즉시 상태 업데이트로 중복 클릭 방지
+        if !uploading {  // 추가 안전장치
+            uploading = true
+            
+            // 즉시 햅틱 피드백
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+            
+            Task {
+                await writePost()
+            }
+        }
     }
     
     /*
@@ -166,11 +444,11 @@ struct ContentAddView: View {
     
     //  수정: 게시글 작성 서버 요청 및 로컬 목록 추가 + 디버깅 로그 추가
     private func writePost() async {
-        print(" writePost 시작")
+        print("📝 writePost 시작")
         
         // 내용 입력 확인 (if문 사용)
         if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print(" 빈 내용으로 인한 실패")
+            print("❌ 빈 내용으로 인한 실패")
             await MainActor.run {
                 uploading = false  // 실패 시 상태 복원
                 alertMessage = "게시글 내용을 입력해주세요."
@@ -181,7 +459,7 @@ struct ContentAddView: View {
         
         // 로그인 상태 재확인
         if !userManager.isLoggedIn || userManager.currentUserID.isEmpty {
-            print(" 로그인 상태 문제")
+            print("❌ 로그인 상태 문제")
             await MainActor.run {
                 uploading = false
                 alertMessage = "로그인이 필요합니다."
@@ -191,7 +469,7 @@ struct ContentAddView: View {
         }
         
         guard let url = URL(string: "\(baseURL)/community/insert") else {
-            print(" URL 생성 실패")
+            print("❌ URL 생성 실패")
             await MainActor.run { uploading = false }
             return
         }
@@ -214,28 +492,28 @@ struct ContentAddView: View {
             )
             req.httpBody = try JSONEncoder().encode(newPost)
             
-            print("서버 요청 시작...")
+            print("🌐 서버 요청 시작...")
             let (_, response) = try await URLSession.shared.data(for: req)
             
             guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
                 throw URLError(.badServerResponse)
             }
             
-            print(" 서버 응답 성공")
+            print("✅ 서버 응답 성공")
             
             await MainActor.run {
                 posts.insert(newPost, at: 0)  // 상위 뷰 게시글 목록에 추가 (Community에 즉시 반영)
-                print(" 게시글 작성 성공: 작성자=\(userManager.currentUserID), 시간=\(currentTime)")
+                print("✅ 게시글 작성 성공: 작성자=\(userManager.currentUserID), 시간=\(currentTime)")
                 dismiss()                   // 성공 시 현재 뷰 닫기 (uploading = false 불필요)
             }
             
         } catch {
-            print(" 네트워크 에러: \(error.localizedDescription)")
+            print("❌ 네트워크 에러: \(error.localizedDescription)")
             await MainActor.run {
                 uploading = false  // 실패 시에만 상태 복원
                 alertMessage = "게시글 작성에 실패했습니다."
                 showAlert = true
-                print(" 게시글 작성 실패: \(error.localizedDescription)")
+                print("❌ 게시글 작성 실패: \(error.localizedDescription)")
             }
         }
         
