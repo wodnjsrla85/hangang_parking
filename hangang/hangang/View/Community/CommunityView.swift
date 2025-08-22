@@ -21,109 +21,107 @@ struct CommunityView: View {
     @State var pendingContentAdd = false             // 로그인 후 게시글 작성 대기 상태
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                // 배경 그라데이션
-                LinearGradient(
-                    colors: [
-                        Color(.systemBackground),
-                        Color(.systemGray6).opacity(0.3)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // 커뮤니티 헤더 카드
-                    ModernCommunityHeader(
-                        userManager: userManager,
-                        onAddPost: {
-                            print("🔘 Plus 버튼 클릭됨") // 디버그용
-                            print("🔍 현재 로그인 상태: \(userManager.isLoggedIn)")
-                            print("🔍 현재 goContentAdd 상태: \(goContentAdd)")
-                            
-                            if userManager.isLoggedIn {
-                                print("✅ 로그인된 상태 - goContentAdd를 true로 설정")
-                                goContentAdd = true
-                                print("🔄 설정 후 goContentAdd 상태: \(goContentAdd)")
-                            } else {
-                                print("❌ 로그인되지 않은 상태 - 로그인 알림 표시")
-                                pendingContentAdd = true  // 게시글 작성 대기 상태 설정
-                                showLoginAlert = true
-                            }
+        ZStack {
+            // 배경 그라데이션
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground),
+                    Color(.systemGray6).opacity(0.3)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // 커뮤니티 헤더 카드
+                ModernCommunityHeader(
+                    userManager: userManager,
+                    onAddPost: {
+                        print("🔘 Plus 버튼 클릭됨") // 디버그용
+                        print("🔍 현재 로그인 상태: \(userManager.isLoggedIn)")
+                        print("🔍 현재 goContentAdd 상태: \(goContentAdd)")
+                        
+                        if userManager.isLoggedIn {
+                            print("✅ 로그인된 상태 - goContentAdd를 true로 설정")
+                            goContentAdd = true
+                            print("🔄 설정 후 goContentAdd 상태: \(goContentAdd)")
+                        } else {
+                            print("❌ 로그인되지 않은 상태 - 로그인 알림 표시")
+                            pendingContentAdd = true  // 게시글 작성 대기 상태 설정
+                            showLoginAlert = true
                         }
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    
-                    // 게시글이 없을 때 빈 화면 표시
-                    if contentList.isEmpty && !isLoading {
-                        Spacer()
-                        ModernEmptyView()
-                        Spacer()
-                    } else {
-                        // 게시글 목록 출력
-                        ScrollView {
-                            LazyVStack(spacing: 16) {
-                                ForEach($contentList, id: \.id) { $item in
-                                    NavigationLink {
-                                        CommentDetail(
-                                            selectedContent: $item,
-                                            commentList: commentList,
-                                            likeList: likeList
-                                        )
-                                    } label: {
-                                        ModernPostCard(
-                                            post: item,
-                                            likeCount: getLikeCount(for: item.id),
-                                            commentCount: getCommentCount(for: item.id)
-                                        )
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                            .padding(.bottom, 100) // 탭바 공간 확보
-                        }
-                        .refreshable { await loadData() }  // 당겨서 새로고침
                     }
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                
+                // 게시글이 없을 때 빈 화면 표시
+                if contentList.isEmpty && !isLoading {
+                    Spacer()
+                    ModernEmptyView()
+                    Spacer()
+                } else {
+                    // 게시글 목록 출력
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach($contentList, id: \.id) { $item in
+                                NavigationLink {
+                                    CommentDetail(
+                                        selectedContent: $item,
+                                        commentList: commentList,
+                                        likeList: likeList
+                                    )
+                                } label: {
+                                    ModernPostCard(
+                                        post: item,
+                                        likeCount: getLikeCount(for: item.id),
+                                        commentCount: getCommentCount(for: item.id)
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 100) // 탭바 공간 확보
+                    }
+                    .refreshable { await loadData() }  // 당겨서 새로고침
                 }
             }
-            
-            // 데이터 로딩 중 오버레이
-            .overlay {
-                if isLoading {
-                    ModernLoadingOverlay()
-                }
+        }
+        
+        // 데이터 로딩 중 오버레이
+        .overlay {
+            if isLoading {
+                ModernLoadingOverlay()
             }
-            .navigationTitle("")
-            .navigationBarHidden(true)
-            
-            // 화면 진입 시 데이터 로드
-            .onAppear { Task { await loadData() } }
-            
-            // 에러 발생 시 알림창
-            .alert("오류", isPresented: $showAlert) {
-                Button("다시 시도") { Task { await loadData() } }
-                Button("확인", role: .cancel) { }
-            } message: {
-                Text(errorMessage ?? "알 수 없는 오류가 발생했습니다.")
+        }
+        .navigationTitle("")
+        .navigationBarHidden(true)
+        
+        // 화면 진입 시 데이터 로드
+        .onAppear { Task { await loadData() } }
+        
+        // 에러 발생 시 알림창
+        .alert("오류", isPresented: $showAlert) {
+            Button("다시 시도") { Task { await loadData() } }
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "알 수 없는 오류가 발생했습니다.")
+        }
+        
+        // ✅ 수정: 로그인 알림
+        .alert("로그인이 필요합니다", isPresented: $showLoginAlert) {
+            Button("로그인하기") {
+                print("🔑 로그인하기 버튼 클릭")
+                showLoginSheet = true
             }
-            
-            // ✅ 수정: 로그인 알림
-            .alert("로그인이 필요합니다", isPresented: $showLoginAlert) {
-                Button("로그인하기") {
-                    print("🔑 로그인하기 버튼 클릭")
-                    showLoginSheet = true
-                }
-                Button("취소", role: .cancel) {
-                    pendingContentAdd = false  // 취소 시 대기 상태 해제
-                }
-            } message: {
-                Text("게시글 작성은 로그인 후 이용 가능합니다.")
+            Button("취소", role: .cancel) {
+                pendingContentAdd = false  // 취소 시 대기 상태 해제
             }
+        } message: {
+            Text("게시글 작성은 로그인 후 이용 가능합니다.")
         }
         
         // 게시글 작성 화면을 sheet로 표시
@@ -368,10 +366,10 @@ struct ModernPostCard: View {
                 
                 Spacer()
                 
-                // 더보기 버튼
-                Image(systemName: "ellipsis")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 16, weight: .semibold))
+//                // 더보기 버튼
+//                Image(systemName: "ellipsis")
+//                    .foregroundColor(.secondary)
+//                    .font(.system(size: 16, weight: .semibold))
             }
             
             // 게시글 본문 내용
@@ -419,16 +417,16 @@ struct ModernPostCard: View {
                 
                 Spacer()
                 
-                // 공유 버튼
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.1))
-                        .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "square.and.arrow.up")
-                        .foregroundColor(.green)
-                        .font(.system(size: 14, weight: .semibold))
-                }
+//                // 공유 버튼
+//                ZStack {
+//                    Circle()
+//                        .fill(Color.green.opacity(0.1))
+//                        .frame(width: 32, height: 32)
+//                    
+//                    Image(systemName: "square.and.arrow.up")
+//                        .foregroundColor(.green)
+//                        .font(.system(size: 14, weight: .semibold))
+//                }
             }
         }
         .padding(20)
