@@ -4,7 +4,7 @@
 //
 
 import SwiftUI
-import PhotosUI
+// import PhotosUI // ❌ 사진 관련 import 주석처리
 
 struct ContentUpdateView: View {
     @Binding var content: ContentJSON                // 편집 중인 게시글 데이터 바인딩
@@ -12,15 +12,14 @@ struct ContentUpdateView: View {
     @State var editText: String = ""          // 수정할 텍스트 내용
     @FocusState var textFocused: Bool          // 텍스트 에디터 포커스 상태
     
-    @State var image: UIImage?                  // 선택된 이미지 (현재 미사용)
-    @State var photoItem: PhotosPickerItem?    // 사진 선택 아이템 (현재 미사용)
+    // @State var image: UIImage?              // ❌ 선택된 이미지 주석처리
+    // @State var photoItem: PhotosPickerItem? // ❌ 사진 선택 아이템 주석처리
     
     @State var showUpdate = false               // 수정 완료 알림 표시 여부
-    //  추가: 업데이트 상태 관리
     @State var updating = false                 // 수정 중 상태
     @Environment(\.dismiss) private var dismiss          // 뷰 닫기 처리
     
-    // 추가: 수정 버튼 활성화 조건 (if문 사용)
+    // 수정 버튼 활성화 조건
     var updateButtonEnabled: Bool {
         if updating {
             return false
@@ -46,14 +45,19 @@ struct ContentUpdateView: View {
         .onAppear {
             setupInitialState()
         }
+        // ✅ 추가: Sheet 닫힐 때 변경사항 저장
+        .onDisappear {
+            saveChangesOnDismiss()
+        }
         .alert("수정 완료", isPresented: $showUpdate) {
             Button("확인") { dismiss() }
         } message: {
             Text("게시글이 성공적으로 수정되었습니다.")
         }
+        // ✅ 수정: onChange 개선
         .onChange(of: textFocused) { _, focused in
             if !focused {
-                content.content = editText // 포커스 해제 시 내용 업데이트
+                saveTemporaryChanges()
             }
         }
     }
@@ -76,7 +80,7 @@ struct ContentUpdateView: View {
             VStack(spacing: 24) {
                 headerCardView
                 contentEditSection
-                photoSection
+                // photoSection // ❌ 사진 섹션 호출 주석처리
                 postInfoSection
                 Spacer(minLength: 100)
             }
@@ -247,100 +251,12 @@ struct ContentUpdateView: View {
         }
     }
     
+    // ❌ 사진 섹션 전체 주석처리
+    /*
     private var photoSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // 섹션 헤더
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.1))
-                        .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "photo")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                
-                Text("사진")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.primary)
-                
-                Text("(선택사항)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-            }
-            
-            // 사진 선택 영역
-            HStack(spacing: 16) {
-                // 사진 추가 버튼
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    VStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(LinearGradient(
-                                    colors: [.orange.opacity(0.2), .orange.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 80, height: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .foregroundColor(.orange)
-                                
-                                Text("사진")
-                                    .font(.caption2)
-                                    .foregroundColor(.orange)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // 선택된 이미지 미리보기
-                if let img = image {
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                        
-                        // 삭제 버튼
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                image = nil
-                                photoItem = nil
-                            }
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(.red)
-                                    .frame(width: 24, height: 24)
-                                
-                                Image(systemName: "xmark")
-                                    .foregroundColor(.white)
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                            }
-                        }
-                        .offset(x: 8, y: -8)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-                
-                Spacer()
-            }
-        }
+        // ... 사진 섹션 코드 주석처리 ...
     }
+    */
     
     private var postInfoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -471,6 +387,22 @@ struct ContentUpdateView: View {
         updating = false
     }
     
+    // ✅ 추가: 임시 변경사항 저장 함수
+    private func saveTemporaryChanges() {
+        if !editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            content.content = editText
+        }
+    }
+
+    // ✅ 추가: Sheet 닫힐 때 변경사항 저장
+    private func saveChangesOnDismiss() {
+        if !editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+           editText != content.content {
+            content.content = editText
+            print("💾 Sheet 닫힘: 변경사항 저장됨")
+        }
+    }
+    
     private func handleUpdate() {
         // 즉시 상태 업데이트로 중복 클릭 방지
         if !updating {  // 추가 안전장치
@@ -486,26 +418,12 @@ struct ContentUpdateView: View {
         }
     }
     
-    /*
-    // 선택한 사진을 UIImage로 변환하여 image 상태에 저장 (필요 시 사용)
-    private func loadImage(from item: PhotosPickerItem?) async {
-        guard let item = item else { return }
-        
-        if let data = try? await item.loadTransferable(type: Data.self) {
-            Task { @MainActor in
-                image = UIImage(data: data)
-            }
-        }
-    }
-    */
-    
-    // 수정: 게시글 수정 서버 요청 - 상태 관리 개선
+    // ✅ 수정: 게시글 수정 서버 요청 - 상태 관리 개선
     func updatePost() async {
         // 내용 변경 확인 (if문 사용)
         if editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             await MainActor.run {
                 updating = false  // 실패 시 상태 복원
-                // 에러 처리 추가 가능
             }
             return
         }
@@ -513,12 +431,9 @@ struct ContentUpdateView: View {
         if editText == content.content {
             await MainActor.run {
                 updating = false  // 변경사항 없음
-                // 변경사항 없음 알림 추가 가능
             }
             return
         }
-        
-        content.content = editText
         
         do {
             let url = URL(string: "\(baseURL)/community/update/\(content.id)")!
@@ -530,9 +445,11 @@ struct ContentUpdateView: View {
             let (_, response) = try await URLSession.shared.data(for: req)
             if let r = response as? HTTPURLResponse, 200...299 ~= r.statusCode {
                 await MainActor.run {
+                    // ✅ 서버 성공 후에 바인딩 업데이트
+                    content.content = editText
+                    content.updatedAt = ISO8601DateFormatter().string(from: Date()) // 수정 시간 업데이트
                     showUpdate = true
                     print("✅ 게시글 수정 성공: \(content.id)")
-                    // 성공 시 updating은 dismiss에서 자동으로 해제됨
                 }
             } else {
                 throw URLError(.badServerResponse)
@@ -541,7 +458,6 @@ struct ContentUpdateView: View {
             await MainActor.run {
                 updating = false  // 실패 시에만 상태 복원
                 print("❌ 게시글 수정 실패:", error.localizedDescription)
-                // 에러 알림 추가 가능
             }
         }
     }

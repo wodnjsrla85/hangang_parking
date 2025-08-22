@@ -2,6 +2,9 @@
 //  CommentDetail.swift
 //  hangang
 //
+
+
+
 import SwiftUI
 
 struct CommentDetail: View {
@@ -426,7 +429,7 @@ struct CommentDetail: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
-            .padding(.bottom, 180) // 140 → 180으로 증가 (더 많은 공간 확보)
+            .padding(.bottom, 180)
         }
     }
     
@@ -443,7 +446,7 @@ struct CommentDetail: View {
                     isFocused = false
                 }
             )
-            .offset(y: keyboardHeight > 0 ? -keyboardHeight + 50 : 0) // 키보드 높이만큼 위로 이동
+            .offset(y: keyboardHeight > 0 ? -keyboardHeight + 50 : 0)
             .animation(.easeInOut(duration: 0.25), value: keyboardHeight)
         }
     }
@@ -471,6 +474,7 @@ struct CommentDetail: View {
             }
         )
     }
+    
     func getTime(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -662,18 +666,18 @@ struct ModernPostDetailCard: View {
                 
                 Spacer()
                 
-                // 공유 버튼
-                Button(action: {}) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.green.opacity(0.1))
-                            .frame(width: 36, height: 36)
-                        
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.green)
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                }
+//                // 공유 버튼
+//                Button(action: {}) {
+//                    ZStack {
+//                        Circle()
+//                            .fill(Color.green.opacity(0.1))
+//                            .frame(width: 36, height: 36)
+//                        
+//                        Image(systemName: "square.and.arrow.up")
+//                            .foregroundColor(.green)
+//                            .font(.system(size: 16, weight: .semibold))
+//                    }
+//                }
             }
         }
         .padding(24)
@@ -735,7 +739,7 @@ struct ModernCommentHeader: View {
     }
 }
 
-// MARK: - 모던 댓글 카드
+// MARK: - 모던 댓글 카드 (❌ 답글 버튼만 제거)
 struct ModernCommentCard: View {
     let comment: CommentJSON
     let canDelete: Bool
@@ -779,13 +783,14 @@ struct ModernCommentCard: View {
                     
                     // 액션 버튼들
                     HStack(spacing: 8) {
-                        if canReply {
-                            Button(action: onReply) {
-                                Image(systemName: "arrowshape.turn.up.left")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                            }
-                        }
+                        // ❌ 답글 버튼 제거 (주석처리)
+                        // if canReply {
+                        //     Button(action: onReply) {
+                        //         Image(systemName: "arrowshape.turn.up.left")
+                        //             .foregroundColor(.blue)
+                        //             .font(.caption)
+                        //     }
+                        // }
                         
                         if canDelete {
                             Button(action: onDelete) {
@@ -859,7 +864,7 @@ struct ModernEmptyComments: View {
             }
         }
         .padding(.vertical, 40)
-        .padding(.bottom, 150) // 100 → 150으로 증가 (더 많은 탭바 공간 확보)
+        .padding(.bottom, 150)
     }
 }
 
@@ -897,8 +902,8 @@ struct ModernCommentInputBar: View {
             textInputView
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16) // 24 → 16으로 줄임 (키보드 애니메이션 때문에)
-        .padding(.bottom, 70) // 키보드가 없을 때의 기본 탭바 높이
+        .padding(.vertical, 16)
+        .padding(.bottom, 70)
         .background(.ultraThinMaterial)
     }
     

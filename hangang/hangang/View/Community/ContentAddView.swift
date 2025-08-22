@@ -3,19 +3,19 @@
 //  hangang
 //
 //  게시글 작성 화면
-//  - 텍스트 입력 및 사진 선택 기능 제공
+//  - 텍스트 입력 기능 제공 (사진 기능 제거됨)
 //  - 새 게시글 서버 전송 및 로컬 목록 업데이트
 //
 
 import SwiftUI
-import PhotosUI
+// import PhotosUI // ❌ 사진 관련 import 주석처리
 
 struct ContentAddView: View {
     @Binding var posts: [ContentJSON]                  // 상위 뷰 게시글 목록 바인딩
     
     @State var content = ""                     // 작성 중인 게시글 텍스트
-    @State var image: UIImage?                   // 선택한 이미지
-    @State var photoItem: PhotosPickerItem?     // 사진 선택 아이템
+    // @State var image: UIImage?               // ❌ 선택한 이미지 주석처리
+    // @State var photoItem: PhotosPickerItem?  // ❌ 사진 선택 아이템 주석처리
     @FocusState var isFocused: Bool              // 텍스트 에디터 포커스 상태
     @State var uploading = false                  // 게시글 업로드 중 상태
     @State var showAlert = false                   // 알림 표시 여부
@@ -82,7 +82,7 @@ struct ContentAddView: View {
             VStack(spacing: 24) {
                 headerCardView
                 contentInputSection
-                photoSection
+                // photoSection // ❌ 사진 섹션 주석처리
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
@@ -233,6 +233,8 @@ struct ContentAddView: View {
         }
     }
     
+    // ❌ 사진 섹션 전체 주석처리
+    /*
     private var photoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // 섹션 헤더
@@ -327,6 +329,7 @@ struct ContentAddView: View {
             }
         }
     }
+    */
     
     private var submitButtonView: some View {
         VStack(spacing: 0) {
@@ -427,6 +430,7 @@ struct ContentAddView: View {
         }
     }
     
+    // ❌ 사진 로드 함수 주석처리 (이미 주석처리 되어 있음)
     /*
     // 선택한 사진을 UIImage로 변환하여 저장 (필요 시 사용)
     func loadImage(from item: PhotosPickerItem?) async {
