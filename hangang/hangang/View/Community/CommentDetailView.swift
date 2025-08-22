@@ -4,38 +4,39 @@
 //
 import SwiftUI
 
-struct CommentDetail: View {
-    @Binding var selectedContent: ContentJSON          // 선택된 게시글 데이터 바인딩
-    @State var commentList: [CommentJSON]              // 댓글 리스트 상태
-    @State var likeList: [PostLikeJSON]                // 좋아요 리스트 상태
+struct CommentDetailView: View {
+    @Binding var selectedContent: ContentJSON
+    @State var commentList: [CommentJSON]
+    @State var likeList: [PostLikeJSON]
     
-    @State var likeCount: Int = 0                       // 좋아요 개수 상태
-    @State var isLiked: Bool = false                    // 현재 좋아요 여부 상태
+    @State var likeCount: Int = 0
+    @State var isLiked: Bool = false
     
-    @State var newComment = ""                           // 새 댓글 입력 텍스트
-    @State var isLoading = false                         // 로딩 인디케이터 상태
-    @State var errorMessage: String?                     // 에러 메시지
-    @State var showAlert = false                          // 에러 알림 표시 여부
-    @FocusState var isFocused: Bool                       // 입력 필드 포커스 상태
+    @State var newComment = ""
+    @State var isLoading = false
+    @State var errorMessage: String?
+    @State var showAlert = false
+    @FocusState var isFocused: Bool
     
-    @State var showActions = false                        // 게시글 수정/삭제 옵션 표시 여부
-    @State var showDelete = false                         // 삭제 확인 알림 표시 여부
-    @State var showUpdate = false                         // 게시글 수정 화면 표시 여부
-    @Environment(\.dismiss) var dismiss                   // 현재 뷰 닫기 처리
+    @State var showActions = false
+    @State var showDelete = false
+    @State var showUpdate = false
+    @Environment(\.dismiss) var dismiss
     
-    @State var showReply = false                          // 답글 작성 시트 표시 여부
-    @State var selectedComment: CommentJSON?             // 답글 대상 댓글
-    @State var replyText = ""                             // 답글 텍스트
+    @State var showReply = false
+    @State var selectedComment: CommentJSON?
+    @State var replyText = ""
     
-    // 로그인한 사용자 정보를 가져오기 위한 UserManager
+    // 로그인 관련 상태
+    @State var showLoginAlert = false
+    @State var showLoginSheet = false
+    
     @EnvironmentObject var userManager: UserManager
     
-    // 로그인한 사용자 ID 가져오기
     var userId: String {
         userManager.isLoggedIn ? userManager.currentUserID : "default_user_id"
     }
     
-    // 댓글 작성 가능 여부 확인
     private var canAddComment: Bool {
         return userManager.isLoggedIn && !newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -43,141 +44,23 @@ struct CommentDetail: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                
-                // 게시글 헤더: 게시물 작성자 프로필 및 작성시간 표시
-                HStack(spacing: 10) {
-                    Circle().fill(.gray).frame(width: 40, height: 40)
-                    VStack(alignment: .leading) {
-                        Text("\(selectedContent.userId.suffix(20))")  // 게시물 작성자 ID
-                            .font(.headline).bold()
-                        Text(getTime(selectedContent.createdAt))          // 게시물 작성 시간
-                            .font(.caption).foregroundColor(.gray)
-                    }
-                    Spacer()
-                }
-                
-                // 게시글 본문 내용 표시
-                Text(selectedContent.content)
-                    .font(.body)
-                    .padding(.vertical, 8)
-                
-                // 좋아요 및 댓글 수 표시 영역
-                HStack {
-                    // 좋아요 토글 버튼
-                    Button {
-                        toggleLike()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .foregroundColor(isLiked ? .blue : .gray)
-                            Text("\(likeCount)")
-                                .foregroundColor(isLiked ? .blue : .gray)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Spacer()
-                    
-                    // 댓글 수 표시
-                    HStack(spacing: 4) {
-                        Image(systemName: "bubble.left").foregroundColor(.green)
-                        Text("\(commentList.filter { comment in comment.postId == selectedContent.id && !comment.deleted }.count)")
-                            .foregroundColor(.green)
-                    }
-                }
-                .font(.caption)
+                postHeaderView
+                postContentView
+                postStatsView
                 
                 Divider()
                 
-                // 댓글 작성 입력창 및 등록 버튼
-                HStack {
-                    TextField("댓글을 입력하세요...", text: $newComment)
-                        .textFieldStyle(.roundedBorder)
-                        .focused($isFocused)
-                        .disabled(!userManager.isLoggedIn)
-                    
-                    Button("작성") {
-                        Task { await addComment() }
-                        isFocused = false
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(canAddComment ? .blue : .gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .disabled(!canAddComment)
-                }
-                .background(Color(.systemBackground))
-                
-                // 로그인되지 않았을 때 안내 메시지
-                if !userManager.isLoggedIn {
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.orange)
-                        Text("댓글 작성은 로그인 후 이용 가능합니다.")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.horizontal, 8)
-                }
+                commentInputView
                 
                 Divider()
                 
-                // 댓글 섹션 헤더: 댓글 개수 포함
-                HStack {
-                    Text("댓글").font(.headline).bold()
-                    Text("(\(commentList.filter { comment in comment.postId == selectedContent.id && !comment.deleted }.count))")
-                        .font(.headline).foregroundColor(.gray)
-                    Spacer()
-                }
-                
-                // 댓글 리스트 출력 - 각 댓글 작성자별로 표시
-                ForEach(commentList.filter { comment in !comment.deleted && comment.postId == selectedContent.id }, id: \.id) { comment in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Circle().fill(.blue.opacity(0.3)).frame(width: 30, height: 30)
-                            VStack(alignment: .leading) {
-                                Text("\(comment.userId.suffix(20))")      // 댓글 작성자 ID
-                                    .font(.caption).bold()
-                                Text(getTime(comment.createdAt))              // 댓글 작성 시간
-                                    .font(.caption2).foregroundColor(.gray)
-                            }
-                            Spacer()
-                            
-                            // 댓글 삭제 버튼 - 로그인된 사용자의 본인 댓글만 표시
-                            if userManager.isLoggedIn && comment.userId == userManager.currentUserID {
-                                Button {
-                                    Task { await deleteComment(id: comment.id) }
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.caption2).foregroundColor(.red)
-                                }
-                            }
-                        }
-                        Text(comment.content)
-                            .font(.body)
-                            .padding(.leading, 35)
-                    }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        // 답글 기능 - 로그인된 경우만
-                        if userManager.isLoggedIn {
-                            selectedComment = comment
-                            replyText = "@사용자\(comment.userId.suffix(4)) "
-                            showReply = true
-                        }
-                    }
-                }
+                commentSectionView
+                commentListView
             }
             .padding()
         }
         .navigationTitle("게시글 상세")
         .navigationBarTitleDisplayMode(.inline)
-        
-        // 게시글 수정/삭제 옵션 메뉴 - 로그인된 사용자의 본인 게시글만
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if userManager.isLoggedIn && selectedContent.userId == userManager.currentUserID {
@@ -186,22 +69,13 @@ struct CommentDetail: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
-                    .confirmationDialog("옵션 선택", isPresented: $showActions, titleVisibility: .visible) {
-                        Button("수정") { showUpdate = true }
-                        Button("삭제", role: .destructive) { showDelete = true }
-                        Button("취소", role: .cancel) {}
-                    }
                 }
             }
         }
-        
-        // 초기 좋아요 및 댓글 데이터 로드
         .onAppear {
             setupLike()
             Task { await loadData() }
         }
-        
-        // 로딩 상태 오버레이 표시
         .overlay {
             if isLoading {
                 ProgressView("로딩 중...")
@@ -209,54 +83,167 @@ struct CommentDetail: View {
                     .background(Color(.systemBackground).opacity(0.8))
             }
         }
-        
-        // 에러 알림창
+        // ✅ 수정: alert와 sheet를 body에 직접 추가
         .alert("알림", isPresented: $showAlert) {
             Button("확인", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "알 수 없는 오류가 발생했습니다.")
         }
-        
-        // 게시글 삭제 확인 알림
+        .alert("로그인이 필요합니다", isPresented: $showLoginAlert) {
+            Button("로그인하기") {
+                showLoginSheet = true
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("댓글 작성은 로그인 후 이용 가능합니다.")
+        }
         .alert("게시글 삭제", isPresented: $showDelete) {
             Button("삭제", role: .destructive) { Task { await deletePost() } }
             Button("취소", role: .cancel) {}
         } message: {
             Text("이 게시글을 삭제하시겠습니까?")
         }
-        
-        // 게시글 수정 화면 시트
+        .confirmationDialog("옵션 선택", isPresented: $showActions, titleVisibility: .visible) {
+            Button("수정") { showUpdate = true }
+            Button("삭제", role: .destructive) { showDelete = true }
+            Button("취소", role: .cancel) {}
+        }
         .sheet(isPresented: $showUpdate) {
             ContentUpdateView(content: $selectedContent)
         }
-        
-        // 답글 작성 화면 시트
-        .sheet(isPresented: $showReply) {
-            replySheet
+        .sheet(isPresented: $showLoginSheet) {
+            LoginView {
+                showLoginSheet = false
+            }
+            .environmentObject(userManager)
         }
-        
-        // 배경 탭으로 키보드 내림
+        .sheet(isPresented: $showReply) {
+            CommentReplySheet(
+                originalComment: selectedComment,
+                replyText: $replyText,
+                onSubmit: { reply in },
+                onDismiss: { resetReply() }
+            )
+        }
         .contentShape(Rectangle())
         .onTapGesture { isFocused = false }
     }
     
-    var replySheet: some View {
-        CommentReplySheet(
-            originalComment: selectedComment,
-            replyText: $replyText,
-            onSubmit: { reply in /* 답글 등록 로직 필요 */ },
-            onDismiss: { resetReply() }
-        )
+    // MARK: - View Components
+    
+    private var postHeaderView: some View {
+        HStack(spacing: 10) {
+            Circle().fill(.gray).frame(width: 40, height: 40)
+            VStack(alignment: .leading) {
+                Text("\(selectedContent.userId.suffix(20))")
+                    .font(.headline).bold()
+                Text(getTime(selectedContent.createdAt))
+                    .font(.caption).foregroundColor(.gray)
+            }
+            Spacer()
+        }
     }
     
-    // 좋아요 초기값 설정 (서버 데이터 불러오기 전 임시)
+    private var postContentView: some View {
+        Text(selectedContent.content)
+            .font(.body)
+            .padding(.vertical, 8)
+    }
+    
+    private var postStatsView: some View {
+        HStack {
+            Button {
+                toggleLike()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        .foregroundColor(isLiked ? .blue : .gray)
+                    Text("\(likeCount)")
+                        .foregroundColor(isLiked ? .blue : .gray)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            HStack(spacing: 4) {
+                Image(systemName: "bubble.left").foregroundColor(.green)
+                Text("\(commentList.filter { comment in comment.postId == selectedContent.id && !comment.deleted }.count)")
+                    .foregroundColor(.green)
+            }
+        }
+        .font(.caption)
+    }
+    
+    private var commentInputView: some View {
+        HStack {
+            ZStack {
+                TextField("댓글을 입력하세요...", text: $newComment)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($isFocused)
+                    .disabled(!userManager.isLoggedIn)
+                
+                if !userManager.isLoggedIn {
+                    Rectangle()
+                        .fill(Color.clear)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            showLoginAlert = true
+                        }
+                }
+            }
+            
+            Button("작성") {
+                if userManager.isLoggedIn {
+                    Task { await addComment() }
+                    isFocused = false
+                } else {
+                    showLoginAlert = true
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(canAddComment ? .blue : .gray)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+        }
+        .background(Color(.systemBackground))
+    }
+    
+    private var commentSectionView: some View {
+        HStack {
+            Text("댓글").font(.headline).bold()
+            Text("(\(commentList.filter { comment in comment.postId == selectedContent.id && !comment.deleted }.count))")
+                .font(.headline).foregroundColor(.gray)
+            Spacer()
+        }
+    }
+    
+    private var commentListView: some View {
+        ForEach(commentList.filter { comment in !comment.deleted && comment.postId == selectedContent.id }, id: \.id) { comment in
+            CommentRowView(
+                comment: comment,
+                userManager: userManager,
+                onDelete: { commentId in
+                    Task { await deleteComment(id: commentId) }
+                },
+                onReply: { selectedComment in
+                    self.selectedComment = selectedComment
+                    replyText = "@사용자\(selectedComment.userId.suffix(4)) "
+                    showReply = true
+                },
+                getTime: getTime
+            )
+        }
+    }
+    
+    // MARK: - Functions (기존 함수들 유지)
+    
     func setupLike() {
         likeCount = 3
         isLiked = false
-        print("초기 상태 설정: count=\(likeCount), liked=\(isLiked)")
     }
     
-    // 좋아요 토글 - 단순한 로그인 확인
     func toggleLike() {
         guard userManager.isLoggedIn else {
             errorMessage = "좋아요는 로그인 후 이용 가능합니다"
@@ -288,7 +275,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 좋아요 등록 요청
     func sendLike() async throws {
         let url = URL(string: "\(baseURL)/postlike/insert")!
         var req = URLRequest(url: url)
@@ -310,7 +296,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 좋아요 취소 요청
     func sendUnlike() async throws {
         let url = URL(string: "\(baseURL)/postlike/delete")!
         var req = URLRequest(url: url)
@@ -329,14 +314,12 @@ struct CommentDetail: View {
         }
     }
     
-    // 답글 작성 상태 초기화
     func resetReply() {
         showReply = false
         replyText = ""
         selectedComment = nil
     }
     
-    // 게시글 삭제 처리
     func deletePost() async {
         do {
             let url = URL(string: "\(baseURL)/community/delete/\(selectedContent.id)")!
@@ -360,7 +343,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 데이터(댓글, 좋아요) 로드
     func loadData() async {
         await MainActor.run { isLoading = true }
         await withTaskGroup(of: Void.self) { group in
@@ -370,7 +352,6 @@ struct CommentDetail: View {
         await MainActor.run { isLoading = false }
     }
     
-    // 댓글 로드
     func loadComments() async {
         do {
             let url = URL(string: "\(baseURL)/comment/select")!
@@ -392,7 +373,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 좋아요 로드
     func loadLikes() async {
         do {
             let url = URL(string: "\(baseURL)/postlike/select")!
@@ -412,7 +392,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 댓글 등록 - 단순한 로그인 확인
     func addComment() async {
         guard userManager.isLoggedIn else {
             await MainActor.run {
@@ -465,7 +444,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 댓글 삭제
     func deleteComment(id: String) async {
         do {
             let url = URL(string: "\(baseURL)/comment/delete/\(id)")!
@@ -487,7 +465,6 @@ struct CommentDetail: View {
         }
     }
     
-    // 작성시간을 상대적 시간으로 변환 (예: 3분 전, 2시간 전)
     func getTime(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -506,7 +483,52 @@ struct CommentDetail: View {
     }
 }
 
-// 답글 작성 시트
+// MARK: - Comment Row View
+struct CommentRowView: View {
+    let comment: CommentJSON
+    let userManager: UserManager
+    let onDelete: (String) -> Void
+    let onReply: (CommentJSON) -> Void
+    let getTime: (String) -> String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Circle().fill(.blue.opacity(0.3)).frame(width: 30, height: 30)
+                VStack(alignment: .leading) {
+                    Text("\(comment.userId.suffix(20))")
+                        .font(.caption).bold()
+                    Text(getTime(comment.createdAt))
+                        .font(.caption2).foregroundColor(.gray)
+                }
+                Spacer()
+                
+                if userManager.isLoggedIn && comment.userId == userManager.currentUserID {
+                    Button {
+                        onDelete(comment.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption2).foregroundColor(.red)
+                    }
+                }
+            }
+            Text(comment.content)
+                .font(.body)
+                .padding(.leading, 35)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+        .onTapGesture {
+            if userManager.isLoggedIn {
+                onReply(comment)
+            }
+        }
+    }
+}
+
+// 답글 작성 시트 (기존과 동일)
 struct CommentReplySheet: View {
     let originalComment: CommentJSON?
     @Binding var replyText: String
@@ -579,7 +601,7 @@ struct CommentReplySheet: View {
 }
 
 #Preview {
-    CommentDetail(
+    CommentDetailView(
         selectedContent: .constant(
             ContentJSON(
                 id: "1",
