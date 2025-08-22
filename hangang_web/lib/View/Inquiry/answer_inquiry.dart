@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
-import '../Model/inquiry.dart';
+import '../../Model/inquiry.dart';
 
 class AnswerInquiry extends StatefulWidget {
   final Inquiry inquiry;
@@ -101,7 +101,7 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -281,11 +281,11 @@ class _AnswerInquiryState extends State<AnswerInquiry> {
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Color(0xFF10b981), Color(0xFF059669)],
+                                colors: [Color(0xFF10b981).withOpacity(0.3), Color(0xFF10b981).withOpacity(0.3)],
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.reply, color: Colors.white, size: 20),
+                            child: Icon(Icons.reply, color: Color(0xFF10b981), size: 20),
                           ),
                           SizedBox(width: 12),
                           Text(

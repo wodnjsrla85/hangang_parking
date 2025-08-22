@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hangangweb/View/all_inquiry_view.dart';
-import 'package:hangangweb/View/answer_inquiry.dart';
+import 'package:hangangweb/View/Inquiry/all_inquiry_view.dart';
+import 'package:hangangweb/View/Inquiry/answer_inquiry.dart';
 import 'package:hangangweb/View/login_view.dart';
 
 void main() {

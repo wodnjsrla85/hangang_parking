@@ -17,7 +17,7 @@ class _SignupViewState extends State<SignupView> {
   
   bool isLoading = false;
 
-  // 🔐 회원가입 함수 (로직 그대로)
+  // 🔐 회원가입 함수
   Future<void> signup() async {
     // 빈칸 체크
     if (idController.text.isEmpty || pwController.text.isEmpty || pwConfirmController.text.isEmpty) {
