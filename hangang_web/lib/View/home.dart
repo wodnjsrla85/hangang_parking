@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hangangweb/View/community_admin_view.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -85,7 +86,7 @@ class _HomeState extends State<Home> {
                   ElevatedButton(
                     onPressed: () {
                       // TODO: 게시판 관리 페이지 연결
-                      // Get.to(const AllBoardView());
+                      Get.to(()=> CommunityAdminView());
                     },
                     child: const Text("게시판 관리 페이지"),
                   ),
