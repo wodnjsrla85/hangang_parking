@@ -2,102 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../Model/inquiry.dart';
-import '../Model/admin.dart';
+import 'adminHandler.dart'; // AdminHandler import
 
 class InquiryHandler {
   static const String baseUrl = 'http://127.0.0.1:8000';
 
+  // AdminHandler 인스턴스 (싱글톤)
+  final AdminHandler adminHandler = AdminHandler();
+
   // 상태 변수
   List<Inquiry> inquiries = [];
   bool isLoading = false;
-  Admin? currentAdmin; // 현재 로그인된 관리자
 
-  // 로그인 했는지 확인
-  bool get isLoggedIn => currentAdmin != null;
-
-  // 🔐 관리자 회원가입
-  Future<String> adminSignup(String adminId, String password) async {
-    try {
-      isLoading = true;
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/admin/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'id': adminId,
-          'pw': password,
-        }),
-      );
-
-      print('📡 응답 상태: ${response.statusCode}');
-      print('📡 응답 내용: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['result'] == 'OK') {
-          print('✅ 회원가입 성공: $adminId');
-          return 'success';
-        } else {
-          return data['message'] ?? '회원가입 실패';
-        }
-      } else {
-        return 'HTTP 오류: ${response.statusCode}';
-      }
-    } catch (e) {
-      print('❌ 회원가입 오류: $e');
-      return '네트워크 오류: $e';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // 🔐 관리자 로그인
-  Future<bool> adminLogin(String adminId, String password) async {
-    try {
-      isLoading = true;
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/admin/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'id': adminId,
-          'pw': password,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['result'] == 'OK') {
-          currentAdmin = Admin.fromJson(data['admin']);
-          print('✅ 로그인 성공: ${currentAdmin!.id}');
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      print('❌ 로그인 오류: $e');
-      return false;
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // 🔐 관리자 로그아웃
-  Future<void> adminLogout() async {
-    try {
-      await http.post(Uri.parse('$baseUrl/api/admin/logout'));
-    } catch (e) {
-      // 에러 있어도 로그아웃 처리
-    }
-    
-    currentAdmin = null;
-    inquiries.clear();
-    print('✅ 로그아웃 완료');
-  }
-
-  // 📋 모든 문의 조회 (기존 코드)
+  // 📋 모든 문의 조회
   Future<ApiResponse<List<Inquiry>>> fetchInquiries() async {
     try {
       isLoading = true;
@@ -125,7 +42,7 @@ class InquiryHandler {
     }
   }
 
-  // ✏️ 답변 작성 (기존 코드)
+  // ✏️ 답변 작성
   Future<ApiResponse<bool>> updateInquiry(String inquiryId, String answerContent) async {
     try {
       if (answerContent.trim().isEmpty) {
@@ -133,7 +50,7 @@ class InquiryHandler {
       }
 
       final updateData = {
-        'adminID': currentAdmin?.id ?? 'admin',
+        'adminID': adminHandler.currentAdminId,
         'adate': DateTime.now().toIso8601String().split('T')[0],
         'answerContent': answerContent.trim(),
         'state': '답변완료',
@@ -151,7 +68,7 @@ class InquiryHandler {
           final idx = inquiries.indexWhere((i) => i.id == inquiryId);
           if (idx != -1) {
             inquiries[idx] = inquiries[idx].copyWith(
-              adminID: currentAdmin?.id ?? 'admin',
+              adminID: adminHandler.currentAdminId,
               aDate: DateTime.now().toIso8601String().split('T')[0],
               answerContent: answerContent.trim(),
               state: '답변완료',
@@ -170,6 +87,19 @@ class InquiryHandler {
   Future<void> refreshAllData() async {
     await fetchInquiries();
   }
+
+  // 관리자 관련 메서드들 (AdminHandler로 위임)
+  bool get isLoggedIn => adminHandler.isLoggedIn;
+  String get currentAdminId => adminHandler.currentAdminId;
+  get currentAdmin => adminHandler.currentAdmin;
+  
+  Future<String> adminSignup(String adminId, String password) => 
+    adminHandler.adminSignup(adminId, password);
+  
+  Future<bool> adminLogin(String adminId, String password) => 
+    adminHandler.adminLogin(adminId, password);
+  
+  Future<void> adminLogout() => adminHandler.adminLogout();
 }
 
 // API 응답 클래스

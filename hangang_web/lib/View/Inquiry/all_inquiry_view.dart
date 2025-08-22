@@ -75,37 +75,36 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                 color: Color(0xFF2D3748),
               ),
             ),
-          ],//Testß
+          ],
         ),
         actions: [
           // 관리자 정보 표시
-          if (handler.isLoggedIn)
-            Container(
-              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Color(0xFF667eea).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Color(0xFF667eea).withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.account_circle, 
-                    color: Color(0xFF667eea), size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    '${handler.currentAdmin?.id ?? "관리자"}',
-                    style: TextStyle(
-                      color: Color(0xFF667eea),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Color(0xFF667eea).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Color(0xFF667eea).withOpacity(0.3)),
             ),
-          
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.account_circle, 
+                  color: Color(0xFF667eea), size: 16),
+                SizedBox(width: 6),
+                Text(
+                  '${handler.currentAdmin?.id ?? "관리자"}',
+                  style: TextStyle(
+                    color: Color(0xFF667eea),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 10,),
           // 새로고침 버튼
           Container(
             margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -137,9 +136,8 @@ class _AllInquiryViewState extends State<AllInquiryView> {
             child: IconButton(
               icon: Icon(Icons.logout, color: Colors.white),
               onPressed: () async {
-                final result = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
+                final result = await Get.dialog<bool>(
+                  AlertDialog(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -154,11 +152,11 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                     content: Text('정말 로그아웃 하시겠습니까?'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context, false),
+                        onPressed: () => Get.back(result: false),
                         child: Text('취소', style: TextStyle(color: Colors.grey)),
                       ),
                       ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
+                        onPressed: () => Get.back(result: true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFFef4444),
                           shape: RoundedRectangleBorder(
@@ -173,8 +171,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                 
                 if (result == true) {
                   await handler.adminLogout();
-                  Navigator.pushReplacement(context, 
-                    MaterialPageRoute(builder: (context) => LoginView()));
+                  Get.offAll(() => LoginView());
                 }
               },
               tooltip: '로그아웃',
@@ -342,6 +339,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                                       horizontalMargin: 20,
                                       headingRowHeight: 56,
                                       dataRowHeight: 72,
+                                      showCheckboxColumn: false, // 체크박스 열 숨기기
                                       headingRowColor: MaterialStateProperty.all(
                                         Color(0xFFF8FAFC),
                                       ),
@@ -362,7 +360,7 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                                           label: _buildColumnHeader('상태', Icons.info),
                                         ),
                                         DataColumn(
-                                          label: _buildColumnHeader('답변', Icons.reply),
+                                          label: _buildColumnHeader('작업', Icons.settings),
                                         ),
                                       ],
                                       rows: List.generate(filteredInquiries.length, (index) {
@@ -379,11 +377,26 @@ class _AllInquiryViewState extends State<AllInquiryView> {
                                             },
                                           ),
                                           cells: [
-                                            DataCell(_buildCellContent('${index + 1}')),
-                                            DataCell(_buildTitleCell(inquiry.title)),
-                                            DataCell(_buildCellContent(inquiry.userID)),
-                                            DataCell(_buildCellContent(inquiry.qDate)),
-                                            DataCell(_buildStatusCell(inquiry.state)),
+                                            DataCell(
+                                              _buildCellContent('${index + 1}'),
+                                              onTap: () => _navigateToInquiry(inquiry),
+                                            ),
+                                            DataCell(
+                                              _buildTitleCell(inquiry.title),
+                                              onTap: () => _navigateToInquiry(inquiry),
+                                            ),
+                                            DataCell(
+                                              _buildCellContent(inquiry.userID),
+                                              onTap: () => _navigateToInquiry(inquiry),
+                                            ),
+                                            DataCell(
+                                              _buildCellContent(inquiry.qDate),
+                                              onTap: () => _navigateToInquiry(inquiry),
+                                            ),
+                                            DataCell(
+                                              _buildStatusCell(inquiry.state),
+                                              onTap: () => _navigateToInquiry(inquiry),
+                                            ),
                                             DataCell(_buildActionCell(inquiry, index)),
                                           ],
                                         );
@@ -402,6 +415,23 @@ class _AllInquiryViewState extends State<AllInquiryView> {
         ],
       ),
     );
+  }
+
+  // 문의로 이동하는 함수 (답변완료/미완료에 따라 다른 모드)
+  void _navigateToInquiry(Inquiry inquiry) async {
+    final result = await Get.to(
+      () => AnswerInquiry(
+        inquiry: inquiry,
+        handler: handler,
+        isViewMode: inquiry.state == '답변완료', // 답변완료면 보기모드, 아니면 편집모드
+      ),
+    );
+    
+    // 답변을 완료했다면 목록 새로고침
+    if (result == true) {
+      setState(() => isLoading = true);
+      await loadInquiries();
+    }
   }
 
   Widget _buildCategoryButton(String category, int count, IconData icon, Color color) {
@@ -561,76 +591,34 @@ class _AllInquiryViewState extends State<AllInquiryView> {
   }
 
   Widget _buildActionCell(Inquiry inquiry, int index) {
-    if (inquiry.state == '답변완료') {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Color(0xFF667eea).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.done, size: 16, color: Color(0xFF667eea)),
-            SizedBox(width: 4),
-            Text(
-              '완료',
-              style: TextStyle(
-                color: Color(0xFF667eea),
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF667eea)],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF667eea).withOpacity(0.3),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          final result = await Get.to(
-            () => AnswerInquiry(
-              inquiry: inquiry,
-              handler: handler,
-            ),
-          );
-          if (result == true) {
-            await handler.refreshAllData();
-            setState(() {});
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 보기/편집 버튼
+        Container(
+          decoration: BoxDecoration(
+            color: inquiry.state == '답변완료' 
+              ? Color(0xFF10b981).withOpacity(0.1)
+              : Color(0xFF667eea).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: inquiry.state == '답변완료'
+                ? Color(0xFF10b981).withOpacity(0.3)
+                : Color(0xFF667eea).withOpacity(0.3)
+            ),
+          ),
+          child: IconButton(
+            onPressed: () => _navigateToInquiry(inquiry),
+            icon: Icon(
+              inquiry.state == '답변완료' ? Icons.article : Icons.edit,
+              color: inquiry.state == '답변완료' ? Color(0xFF10b981) : Color(0xFF667eea),
+              size: 16
+            ),
+            tooltip: inquiry.state == '답변완료' ? '답변 보기' : '답변하기',
+            constraints: BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ),
-        icon: Icon(Icons.edit, size: 16, color: Colors.white),
-        label: Text(
-          '답변하기',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-        ),
-      ),
+      ],
     );
   }
 }
