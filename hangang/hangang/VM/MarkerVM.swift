@@ -28,7 +28,7 @@ class APIService: ObservableObject {
         }
         
         // 디버깅: 응답 데이터 확인
-        if let jsonString = String(data: data, encoding: .utf8) {
+        if String(data: data, encoding: .utf8) != nil {
             print("📡 서버 응답 데이터:")
         }
         

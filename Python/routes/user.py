@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 # Router 생성
@@ -38,6 +38,35 @@ def normalize_user(doc: dict) -> dict:
         return doc
     doc['_id'] = str(doc.get('_id'))
     return doc
+
+@router.get('/api/admin/dashboard')
+async def get_dashboard():
+    """관리자 대시보드: 유저 & 문의 통계"""
+    try:
+        # 총 유저 수
+        total_users = await collection_user.count_documents({})
+
+        # 오늘 가입자 수 (date: "YYYY-MM-DD" 문자열로 저장됨)
+        today_str = datetime.utcnow().strftime('%Y-%m-%d')
+        new_today = await collection_user.count_documents({'date': today_str})
+
+        # 오늘 문의 수
+        inquiries_today = 0
+        collections = await db.list_collection_names()
+        if "Inquiry" in collections:
+            inquiries_today = await db.Inquiry.count_documents({'qdate': today_str})
+
+        return {
+            "result": "OK",
+            "total_users": total_users,
+            "new_today": new_today,
+            "inquiries_today": inquiries_today
+        }
+
+    except Exception as e:
+        print(f"❌ 관리자 대시보드 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"대시보드 조회 실패: {str(e)}")
+
 
 @router.post('/user/insert')
 async def insert_user(user: User):

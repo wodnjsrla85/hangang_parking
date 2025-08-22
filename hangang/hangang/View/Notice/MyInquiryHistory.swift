@@ -81,7 +81,7 @@ struct MyInquiryHistory: View {
         .navigationTitle("나의 문의내역")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.fetchUserInquiries(userID: userManager.currentUserID ?? "")
+            await viewModel.fetchUserInquiries(userID: userManager.currentUserID)
         }
     }
     
@@ -178,6 +178,13 @@ struct InquiryHistoryHeader: View {
             // 통계 카드들
             HStack(spacing: 12) {
                 StatCard(
+                    title: "전체",
+                    count: totalCount,
+                    icon: "list.bullet",
+                    color: .blue
+                )
+
+                StatCard(
                     title: "답변완료",
                     count: answeredCount,
                     icon: "checkmark.circle.fill",
@@ -191,12 +198,6 @@ struct InquiryHistoryHeader: View {
                     color: .orange
                 )
                 
-                StatCard(
-                    title: "전체",
-                    count: totalCount,
-                    icon: "list.bullet",
-                    color: .blue
-                )
             }
         }
     }
@@ -347,9 +348,7 @@ struct InquiryHistoryCard: View {
             
             // 내용 미리보기
             contentPreview
-            
-            // 하단 정보
-            footerSection
+
         }
         .padding(20)
         .background(cardBackground)
@@ -402,22 +401,6 @@ struct InquiryHistoryCard: View {
             .foregroundColor(.secondary)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
-    }
-    
-    private var footerSection: some View {
-        HStack {
-            Label("상세보기", systemImage: "arrow.right.circle")
-                .font(.caption)
-                .foregroundColor(.blue)
-            
-            Spacer()
-            
-            if inquiry.isAnswered {
-                Label("답변완료", systemImage: "checkmark.seal.fill")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            }
-        }
     }
     
     private var cardBackground: some View {
