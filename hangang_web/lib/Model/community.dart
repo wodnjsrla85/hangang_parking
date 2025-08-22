@@ -13,7 +13,7 @@ class Community {
     required this.content,
     required this.createdAt,
     required this.updatedAt,
-    this.deleted = false,
+    required this.deleted,
     this.deletedAt,
   });
 
@@ -39,25 +39,5 @@ class Community {
       'deleted': deleted,
       'deletedAt': deletedAt,
     };
-  }
-
-  Community copyWith({
-    String? id,
-    String? userId,
-    String? content,
-    String? createdAt,
-    String? updatedAt,
-    bool? deleted,
-    String? deletedAt,
-  }) {
-    return Community(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      deleted: deleted ?? this.deleted,
-      deletedAt: deletedAt ?? this.deletedAt,
-    );
   }
 }

@@ -1,22 +1,20 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../Model/community.dart';
+import '../Model/comment.dart';
 
-class CommunityHandler {
+class CommentHandler {
   static const String baseUrl = 'http://localhost:8000';
-  List<Community> communities = [];
+  List<Comment> comments = [];
   String selectedCategory = '전체';
   bool isLoading = false;
-  bool isLoggedIn = true;
-  Admin? currentAdmin;
   String errorMessage = '';
 
-  Future<bool> fetchCommunities() async {
+  Future<bool> fetchAllComments() async {
     try {
       isLoading = true;
       errorMessage = '';
       
-      final String fullUrl = '$baseUrl/community/select';
+      final String fullUrl = '$baseUrl/comment/select';
       print('🔍 API 호출 시도: $fullUrl');
       
       final response = await http.get(
@@ -32,16 +30,16 @@ class CommunityHandler {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        communities = (data['results'] as List)
-            .map((json) => Community.fromJson(json))
+        comments = (data['results'] as List)
+            .map((json) => Comment.fromJson(json))
             .toList();
         
-        communities.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        comments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         
-        print('✅ 커뮤니티 ${communities.length}개 로드 성공');
+        print('✅ 댓글 ${comments.length}개 로드 성공');
         return true;
       } else {
-        errorMessage = '커뮤니티 목록을 불러오는데 실패했습니다. 상태코드: ${response.statusCode}';
+        errorMessage = '댓글 목록을 불러오는데 실패했습니다. 상태코드: ${response.statusCode}';
         print('❌ API 오류: $errorMessage');
         return false;
       }
@@ -54,39 +52,41 @@ class CommunityHandler {
     }
   }
 
-  List<Community> get filteredCommunities {
+  List<Comment> get filteredComments {
     switch (selectedCategory) {
       case '전체':
-        return communities;
+        return comments;
       case '활성':
-        return communities;
+        return comments;
       case '삭제됨':
         return [];
       default:
-        return communities;
+        return comments;
     }
   }
 
-  int get totalCount => communities.length;
-  int get activeCount => communities.length;
+  int get totalCount => comments.length;
+  int get activeCount => comments.length;
   int get deletedCount => 0;
 
-  List<Community> searchCommunities(String query) {
+  List<Comment> searchComments(String query) {
     final lowerQuery = query.toLowerCase();
-    final baseList = filteredCommunities;
+    final baseList = filteredComments;
     
-    return baseList.where((community) {
-      return community.content.toLowerCase().contains(lowerQuery) ||
-             community.userId.toLowerCase().contains(lowerQuery);
+    return baseList.where((comment) {
+      return comment.content.toLowerCase().contains(lowerQuery) ||
+             comment.userId.toLowerCase().contains(lowerQuery) ||
+             comment.username.toLowerCase().contains(lowerQuery) ||
+             comment.communityId.toLowerCase().contains(lowerQuery);
     }).toList();
   }
 
-  Future<bool> updateCommunity(String communityId, String newContent) async {
+  Future<bool> updateComment(String commentId, String newContent) async {
     try {
       errorMessage = '';
       
       final response = await http.put(
-        Uri.parse('$baseUrl/community/update/$communityId'),
+        Uri.parse('$baseUrl/comment/update/$commentId'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -94,21 +94,23 @@ class CommunityHandler {
       );
 
       if (response.statusCode == 200) {
-        final index = communities.indexWhere((c) => c.id == communityId);
+        final index = comments.indexWhere((c) => c.id == commentId);
         if (index != -1) {
-          communities[index] = Community(
-            id: communities[index].id,
-            userId: communities[index].userId,
+          comments[index] = Comment(
+            id: comments[index].id,
+            communityId: comments[index].communityId,
+            userId: comments[index].userId,
+            username: comments[index].username,
             content: newContent,
-            createdAt: communities[index].createdAt,
+            createdAt: comments[index].createdAt,
             updatedAt: DateTime.now().toIso8601String(),
-            deleted: communities[index].deleted,
-            deletedAt: communities[index].deletedAt,
+            deleted: comments[index].deleted,
+            deletedAt: comments[index].deletedAt,
           );
         }
         return true;
       } else {
-        errorMessage = '게시글 수정에 실패했습니다.';
+        errorMessage = '댓글 수정에 실패했습니다.';
         return false;
       }
     } catch (e) {
@@ -117,47 +119,27 @@ class CommunityHandler {
     }
   }
 
-  Future<bool> deleteCommunity(String communityId) async {
+  Future<bool> deleteComment(String commentId) async {
     try {
       errorMessage = '';
       
       final response = await http.delete(
-        Uri.parse('$baseUrl/community/delete/$communityId'),
+        Uri.parse('$baseUrl/comment/delete/$commentId'),
         headers: {
           'Content-Type': 'application/json',
         },
       );
 
       if (response.statusCode == 200) {
-        communities.removeWhere((c) => c.id == communityId);
+        comments.removeWhere((c) => c.id == commentId);
         return true;
       } else {
-        errorMessage = '게시글 삭제에 실패했습니다.';
+        errorMessage = '댓글 삭제에 실패했습니다.';
         return false;
       }
     } catch (e) {
       errorMessage = '오류가 발생했습니다: $e';
       return false;
     }
-  }
-
-  Future<void> adminLogout() async {
-    isLoggedIn = false;
-    currentAdmin = null;
-    communities.clear();
-  }
-}
-
-class Admin {
-  final String id;
-  final String name;
-
-  Admin({required this.id, required this.name});
-
-  factory Admin.fromJson(Map<String, dynamic> json) {
-    return Admin(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-    );
   }
 }

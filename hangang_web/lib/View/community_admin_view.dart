@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../VM/community_handler.dart';
+import '../VM/comment_handler.dart';
 import '../Model/community.dart';
+import '../Model/comment.dart';
 
 class CommunityAdminView extends StatefulWidget {
   const CommunityAdminView({super.key});
@@ -9,21 +12,76 @@ class CommunityAdminView extends StatefulWidget {
   State<CommunityAdminView> createState() => _CommunityAdminViewState();
 }
 
-class _CommunityAdminViewState extends State<CommunityAdminView> {
-  final CommunityHandler handler = CommunityHandler();
+class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProviderStateMixin {
+  final CommunityHandler communityHandler = CommunityHandler();
+  final CommentHandler commentHandler = CommentHandler();
   final TextEditingController searchController = TextEditingController();
+  
+  late TabController _tabController;
   String searchQuery = '';
+  int currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    loadCommunities();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    loadAllData();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      setState(() {
+        currentTabIndex = _tabController.index;
+        searchQuery = '';
+        searchController.clear();
+      });
+    }
+  }
+
+  Future<void> loadAllData() async {
+    await Future.wait([
+      loadCommunities(),
+      loadComments(),
+    ]);
   }
 
   Future<void> loadCommunities() async {
-    await handler.fetchCommunities();
+    setState(() => communityHandler.isLoading = true);
+    
+    final success = await communityHandler.fetchCommunities();
     if (!mounted) return;
-    setState(() {});
+    
+    setState(() => communityHandler.isLoading = false);
+    
+    if (!success) {
+      Get.snackbar(
+        '오류',
+        '커뮤니티 데이터 로드 실패: ${communityHandler.errorMessage}',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> loadComments() async {
+    setState(() => commentHandler.isLoading = true);
+    
+    final success = await commentHandler.fetchAllComments();
+    if (!mounted) return;
+    
+    setState(() => commentHandler.isLoading = false);
+    
+    if (!success) {
+      Get.snackbar(
+        '오류',
+        '댓글 데이터 로드 실패: ${commentHandler.errorMessage}',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   @override
@@ -34,6 +92,10 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2D3748),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
         title: Row(
           children: [
             Container(
@@ -44,11 +106,11 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.article, color: Colors.white, size: 20),
+              child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             const Text(
-              '커뮤니티 관리',
+              '관리자 패널',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -59,7 +121,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         ),
         actions: [
           // 관리자 정보
-          if (handler.isLoggedIn)
+          if (communityHandler.isLoggedIn)
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -71,11 +133,10 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.account_circle, 
-                    color: Color(0xFF667eea), size: 16),
+                  const Icon(Icons.account_circle, color: Color(0xFF667eea), size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    '${handler.currentAdmin?.id ?? "관리자"}',
+                    '${communityHandler.currentAdmin?.id ?? "관리자"}',
                     style: const TextStyle(
                       color: Color(0xFF667eea),
                       fontWeight: FontWeight.w600,
@@ -97,10 +158,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
             ),
             child: IconButton(
               icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: () {
-                setState(() => handler.isLoading = true);
-                loadCommunities();
-              },
+              onPressed: () => loadAllData(),
               tooltip: '새로고침',
             ),
           ),
@@ -121,22 +179,65 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
             ),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF667eea),
+          labelColor: const Color(0xFF667eea),
+          unselectedLabelColor: Colors.grey,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          tabs: [
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.article, size: 18),
+                  const SizedBox(width: 8),
+                  Text('게시글 (${communityHandler.totalCount})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.comment, size: 18),
+                  const SizedBox(width: 8),
+                  Text('댓글 (${commentHandler.totalCount})'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // 카테고리 필터 섹션
-          _buildCategoryFilterSection(),
-          
-          // 커뮤니티 목록 섹션
-          Expanded(
-            child: _buildCommunityListSection(),
-          ),
+          _buildCommunityTab(),
+          _buildCommentTab(),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryFilterSection() {
+  Widget _buildCommunityTab() {
+    return Column(
+      children: [
+        _buildCommunityFilterSection(),
+        Expanded(child: _buildCommunityListSection()),
+      ],
+    );
+  }
+
+  Widget _buildCommentTab() {
+    return Column(
+      children: [
+        _buildCommentFilterSection(),
+        Expanded(child: _buildCommentListSection()),
+      ],
+    );
+  }
+
+  Widget _buildCommunityFilterSection() {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(20),
@@ -148,13 +249,12 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 섹션 제목
           Row(
             children: [
               const Icon(Icons.filter_list, color: Color(0xFF667eea), size: 20),
               const SizedBox(width: 8),
               const Text(
-                '검색 및 카테고리 필터',
+                '게시글 검색',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -165,7 +265,6 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           ),
           const SizedBox(height: 16),
           
-          // 검색바
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
@@ -188,29 +287,102 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           ),
           const SizedBox(height: 16),
           
-          // 카테고리 버튼들
+          // ✅ 카테고리 필터 버튼 주석 처리
+          /*
           Row(
             children: [
-              _buildCategoryButton('전체', handler.totalCount, Icons.list, const Color(0xFF667eea)),
+              _buildCategoryButton('전체', communityHandler.totalCount, Icons.list, const Color(0xFF667eea), true),
               const SizedBox(width: 12),
-              _buildCategoryButton('활성', handler.activeCount, Icons.check_circle, const Color(0xFF10b981)),
-              const SizedBox(width: 12),
-              _buildCategoryButton('삭제됨', handler.deletedCount, Icons.delete, const Color(0xFFef4444)),
+              _buildCategoryButton('활성', communityHandler.activeCount, Icons.check_circle, const Color(0xFF10b981), true),
             ],
           ),
+          */
         ],
       ),
     );
   }
 
-  Widget _buildCategoryButton(String category, int count, IconData icon, Color color) {
-    bool isSelected = handler.selectedCategory == category;
+  Widget _buildCommentFilterSection() {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.filter_list, color: Color(0xFF10b981), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                '댓글 검색',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: TextField(
+              controller: searchController,
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: '댓글 내용이나 작성자로 검색...',
+                prefixIcon: Icon(Icons.search, color: Color(0xFF10b981)),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // ✅ 카테고리 필터 버튼 주석 처리
+          /*
+          Row(
+            children: [
+              _buildCategoryButton('전체', commentHandler.totalCount, Icons.comment, const Color(0xFF10b981), false),
+              const SizedBox(width: 12),
+              _buildCategoryButton('활성', commentHandler.activeCount, Icons.check_circle, const Color(0xFF059669), false),
+            ],
+          ),
+          */
+        ],
+      ),
+    );
+  }
+
+  // ✅ 카테고리 버튼 함수도 주석 처리
+  /*
+  Widget _buildCategoryButton(String category, int count, IconData icon, Color color, bool isCommunity) {
+    bool isSelected = isCommunity 
+      ? communityHandler.selectedCategory == category
+      : commentHandler.selectedCategory == category;
     
     return Expanded(
       child: GestureDetector(
         onTap: () {
           setState(() {
-            handler.selectedCategory = category;
+            if (isCommunity) {
+              communityHandler.selectedCategory = category;
+            } else {
+              commentHandler.selectedCategory = category;
+            }
           });
         },
         child: AnimatedContainer(
@@ -269,11 +441,12 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
       ),
     );
   }
+  */
 
   Widget _buildCommunityListSection() {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-      child: handler.isLoading
+      child: communityHandler.isLoading
         ? const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -284,11 +457,8 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  '커뮤니티 목록을 불러오는 중...',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                  ),
+                  '게시글 목록을 불러오는 중...',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ],
             ),
@@ -297,13 +467,37 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
     );
   }
 
+  Widget _buildCommentListSection() {
+    return Container(
+      margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+      child: commentHandler.isLoading
+        ? const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10b981)),
+                  strokeWidth: 3,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '댓글 목록을 불러오는 중...',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ],
+            ),
+          )
+        : _buildCommentList(),
+    );
+  }
+
   Widget _buildCommunityList() {
     List<Community> displayList = searchQuery.isEmpty 
-      ? handler.filteredCommunities 
-      : handler.searchCommunities(searchQuery);
+      ? communityHandler.filteredCommunities 
+      : communityHandler.searchCommunities(searchQuery);
 
     if (displayList.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState('게시글');
     }
 
     return Card(
@@ -320,10 +514,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 리스트 헤더
-            _buildListHeader(displayList.length),
-            
-            // 스크롤 가능한 리스트
+            _buildListHeader('게시글', displayList.length, communityHandler.selectedCategory),
             Expanded(
               child: ListView.builder(
                 itemCount: displayList.length,
@@ -339,7 +530,46 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildCommentList() {
+    List<Comment> displayList = searchQuery.isEmpty 
+      ? commentHandler.filteredComments 
+      : commentHandler.searchComments(searchQuery);
+
+    if (displayList.isEmpty) {
+      return _buildEmptyState('댓글');
+    }
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildListHeader('댓글', displayList.length, commentHandler.selectedCategory),
+            Expanded(
+              child: ListView.builder(
+                itemCount: displayList.length,
+                itemBuilder: (context, index) {
+                  final comment = displayList[index];
+                  return _buildCommentItem(comment, index);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String type) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -353,7 +583,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           Text(
             searchQuery.isNotEmpty 
               ? '검색 결과가 없습니다'
-              : '${handler.selectedCategory} 게시글이 없습니다',
+              : '$type 데이터가 없습니다',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -364,7 +594,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           Text(
             searchQuery.isNotEmpty 
               ? '다른 키워드로 검색해보세요'
-              : '새로운 게시글이 등록되면 여기에 표시됩니다',
+              : '새로운 $type이 등록되면 여기에 표시됩니다',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[500],
@@ -375,15 +605,14 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
     );
   }
 
-  Widget _buildListHeader(int count) {
+  Widget _buildListHeader(String type, int count, String category) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xFF667eea).withOpacity(0.1),
-            const Color(0xFF764ba2).withOpacity(0.1),
-          ],
+          colors: type == '게시글'
+            ? [const Color(0xFF667eea).withOpacity(0.1), const Color(0xFF764ba2).withOpacity(0.1)]
+            : [const Color(0xFF10b981).withOpacity(0.1), const Color(0xFF059669).withOpacity(0.1)],
         ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
@@ -392,10 +621,14 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.list_alt, color: Color(0xFF667eea), size: 24),
+          Icon(
+            type == '게시글' ? Icons.list_alt : Icons.comment,
+            color: type == '게시글' ? const Color(0xFF667eea) : const Color(0xFF10b981),
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Text(
-            '${handler.selectedCategory} 커뮤니티 목록',
+            '$type 목록',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -406,7 +639,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF667eea),
+              color: type == '게시글' ? const Color(0xFF667eea) : const Color(0xFF10b981),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -435,7 +668,6 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 헤더 영역
           Row(
             children: [
               Text(
@@ -476,7 +708,6 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           ),
           const SizedBox(height: 12),
           
-          // 내용
           Text(
             community.content,
             style: const TextStyle(
@@ -489,48 +720,126 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
           ),
           const SizedBox(height: 12),
           
-          // 액션 버튼들
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (!community.deleted) ...[
-                _buildActionButton(
-                  '수정', 
-                  Icons.edit, 
-                  const Color(0xFF10b981),
-                  () => _showEditDialog(community),
+              _buildActionButton(
+                '수정', 
+                Icons.edit, 
+                const Color(0xFF10b981),
+                () => _showEditCommunityDialog(community),
+              ),
+              const SizedBox(width: 8),
+              _buildActionButton(
+                '삭제', 
+                Icons.delete, 
+                const Color(0xFFef4444),
+                () => _showDeleteCommunityDialog(community),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommentItem(Comment comment, int index) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: index % 2 == 0 ? Colors.grey.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '${index + 1}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF10b981),
+                  fontSize: 16,
                 ),
-                const SizedBox(width: 8),
-                _buildActionButton(
-                  '삭제', 
-                  Icons.delete, 
-                  const Color(0xFFef4444),
-                  () => _showDeleteDialog(community),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10b981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                child: Text(
+                  comment.username,
+                  style: const TextStyle(
+                    color: Color(0xFF10b981),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.info_outline, size: 12, color: Colors.grey),
-                      SizedBox(width: 4),
-                      Text(
-                        '삭제된 게시글',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatDate(comment.createdAt),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+              const Spacer(),
+              _buildStatusBadge(comment.deleted),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          Text(
+            comment.content,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF2D3748),
+              height: 1.5,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.link, size: 12, color: Color(0xFF667eea)),
+                const SizedBox(width: 4),
+                Text(
+                  '게시글 ID: ${comment.communityId}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF667eea),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // ✅ 댓글 액션 버튼에서 수정 버튼 제거 (삭제 버튼만 유지)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _buildActionButton(
+                '삭제', 
+                Icons.delete, 
+                const Color(0xFFef4444),
+                () => _showDeleteCommentDialog(comment),
+              ),
             ],
           ),
         ],
@@ -607,7 +916,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
     );
   }
 
-  void _showEditDialog(Community community) {
+  void _showEditCommunityDialog(Community community) {
     final TextEditingController editController = TextEditingController(text: community.content);
     
     showDialog(
@@ -634,29 +943,41 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Get.back(),
             child: const Text('취소', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
               if (editController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('내용을 입력해주세요'), backgroundColor: Colors.red),
+                Get.snackbar(
+                  '오류',
+                  '내용을 입력해주세요',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
                 );
                 return;
               }
               
-              final result = await handler.updateCommunity(community.id, editController.text);
-              Navigator.pop(context);
+              final success = await communityHandler.updateCommunity(community.id, editController.text);
+              Get.back();
               
-              if (result.success) {
+              if (success) {
                 setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.message)),
+                Get.snackbar(
+                  '성공',
+                  '게시글이 수정되었습니다.',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.message), backgroundColor: Colors.red),
+                Get.snackbar(
+                  '오류',
+                  communityHandler.errorMessage,
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
                 );
               }
             },
@@ -671,7 +992,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
     );
   }
 
-  void _showDeleteDialog(Community community) {
+  void _showDeleteCommunityDialog(Community community) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -686,22 +1007,162 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         content: const Text('정말 이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Get.back(),
             child: const Text('취소', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
-              final result = await handler.deleteCommunity(community.id);
-              Navigator.pop(context);
+              final success = await communityHandler.deleteCommunity(community.id);
+              Get.back();
               
-              if (result.success) {
+              if (success) {
                 setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.message)),
+                Get.snackbar(
+                  '성공',
+                  '게시글이 삭제되었습니다.',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.message), backgroundColor: Colors.red),
+                Get.snackbar(
+                  '오류',
+                  communityHandler.errorMessage,
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFef4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('삭제', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ 댓글 수정 다이얼로그 함수 주석 처리 (더 이상 사용하지 않음)
+  /*
+  void _showEditCommentDialog(Comment comment) {
+    final TextEditingController editController = TextEditingController(text: comment.content);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit, color: Color(0xFF10b981)),
+            SizedBox(width: 8),
+            Text('댓글 수정'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: editController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: '수정할 내용을 입력하세요...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (editController.text.trim().isEmpty) {
+                Get.snackbar(
+                  '오류',
+                  '내용을 입력해주세요',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+                return;
+              }
+              
+              final success = await commentHandler.updateComment(comment.id, editController.text);
+              Get.back();
+              
+              if (success) {
+                setState(() {});
+                Get.snackbar(
+                  '성공',
+                  '댓글이 수정되었습니다.',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
+              } else {
+                Get.snackbar(
+                  '오류',
+                  commentHandler.errorMessage,
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10b981),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('수정', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+  */
+
+  void _showDeleteCommentDialog(Comment comment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Color(0xFFef4444)),
+            SizedBox(width: 8),
+            Text('댓글 삭제'),
+          ],
+        ),
+        content: const Text('정말 이 댓글을 삭제하시겠습니까?\n삭제된 댓글은 복구할 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await commentHandler.deleteComment(comment.id);
+              Get.back();
+              
+              if (success) {
+                setState(() {});
+                Get.snackbar(
+                  '성공',
+                  '댓글이 삭제되었습니다.',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
+              } else {
+                Get.snackbar(
+                  '오류',
+                  commentHandler.errorMessage,
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
                 );
               }
             },
@@ -731,15 +1192,14 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
         content: const Text('정말 로그아웃 하시겠습니까?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Get.back(),
             child: const Text('취소', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
-              await handler.adminLogout();
-              Navigator.pop(context);
-              // 로그인 페이지로 이동
-              Navigator.pushReplacementNamed(context, '/login');
+              await communityHandler.adminLogout();
+              Get.back();
+              Get.offAllNamed('/');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
@@ -763,6 +1223,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     searchController.dispose();
     super.dispose();
   }
