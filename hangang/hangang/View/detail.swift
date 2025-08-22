@@ -4,74 +4,90 @@
 //
 //  Created by 김지호 on 8/19/25.
 //
-
 import SwiftUI
 
-struct detail: View {
+struct BuskingInputView: View {
+    @EnvironmentObject var userManager: UserManager
     @State private var name = ""
     @State private var bandname = ""
     @State private var category = ""
-    @State private var dateTime = ""
+    @State private var dateTime = Date()
     @State private var place = ""
     @State private var genre = ""
     @State private var content = ""
 
-    // 알림 상태
     @State private var showAlert = false
     @State private var alertMessage = ""
-
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
 
-                    Text("버스킹 신청을 위한 안내 문구를 작성합니다.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 8)
+                Text("버스킹 신청을 위한 안내 문구를 작성합니다.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 8)
 
-                    Group {
-                        customTextField("밴드 이름", text: $bandname)
-                        customTextField("이름", text: $name)
-                        customTextField("장르", text: $category)
-                        customTextField("공연 날짜 및 시간", text: $dateTime)
+                Group {
+                    customTextField("밴드 이름", text: $bandname)
+                    customTextField("이름", text: $name)
+                    customTextField("장르", text: $category)
+                    
+                    DatePicker("공연 날짜 ", selection: $dateTime, displayedComponents: [.date, .hourAndMinute])
+                           .datePickerStyle(.compact)
+                           .padding()
+                           .background(Color(.systemGray6))
+                           .cornerRadius(10)
+                }
 
-                    }
+                customTextEditor("공연 내용 상세 설명", text: $content)
 
-                    // 멀티라인 필드
-                    customTextEditor("공연 내용 상세 설명", text: $content)
-                    Spacer()
-                    // 신청하기 버튼
-                    Button(action: {
-                        Task {
-                            let success = await insertAction()
+                Spacer()
+
+                Button(action: {
+                    Task {
+                        let success = await insertAction()
+                        await MainActor.run {
                             if success {
-                                alertMessage = "신청이 완료되었습니다 신청 결과는 마이페이지에서 확인 가능합니다."
+                                alertMessage = "신청이 완료되었습니다. 결과는 마이페이지에서 확인 가능합니다."
+                                showAlert = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                    dismiss()
+                                }
                             } else {
                                 alertMessage = "신청 중 오류가 발생했습니다."
+                                showAlert = true
                             }
-                            showAlert = true
                         }
-                    }) {
-                        Text("신청하기")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
                     }
-                    .padding(.top, 20)
-                    .alert(isPresented: $showAlert) {
-                        Alert(title: Text(alertMessage))
-                    }
-
+                })
+                {
+                    Text("신청하기")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
-                .padding()
+                .padding(.top, 20)
+                .alert(isPresented: $showAlert) {
+                    Alert(title: Text(alertMessage),
+                         dismissButton: .default(Text("확인")) {
+                             if alertMessage.contains("신청 완료") {
+                                 dismiss()
+                             }
+                         }
+                        
+                    
+                    )
+                }
             }
-            .navigationTitle("반포한강공원 버스킹 신청서")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding()
         }
+        .navigationTitle("반포한강공원 버스킹 신청서")
+        .navigationBarTitleDisplayMode(.inline)
+        
     }
 
     //---------- Function -----------------
@@ -101,12 +117,16 @@ struct detail: View {
 
     //  insertAction: 성공 여부 반환
     func insertAction() async -> Bool {
-        guard let url = URL(string: "http://127.0.0.1:8000/insert") else { return false }
-
+        guard let url = URL(string: "http://127.0.0.1:8000/busking/insert") else { return false }
+        let formatter = DateFormatter()
+          formatter.dateFormat = "yyyy-MM-dd HH:mm"
+          let dateString = formatter.string(from: dateTime)
+        
+        
         let body: [String: Any] = [
-            "userid": "2",
+            "userid": userManager.currentUserID,
             "name": name,
-            "date": dateTime,
+            "date": dateString,
             "category": category,
             "content": content,
             "bandName": bandname,
