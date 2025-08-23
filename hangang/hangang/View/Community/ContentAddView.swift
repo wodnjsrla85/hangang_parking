@@ -2,10 +2,7 @@
 //  ContentAddView.swift
 //  hangang
 //
-//  게시글 작성 화면
-//  - 텍스트 입력 기능 제공 (사진 기능 제거됨)
-//  - 새 게시글 서버 전송 및 로컬 목록 업데이트
-//
+
 
 import SwiftUI
 // import PhotosUI // ❌ 사진 관련 import 주석처리
@@ -55,7 +52,12 @@ struct ContentAddView: View {
             setupInitialState()
         }
         .alert("알림", isPresented: $showAlert) {
-            Button("확인", role: .cancel) { }
+            Button("확인", role: .cancel) {
+                // ✅ 수정: 성공 메시지인 경우 화면 닫기
+                if alertMessage.contains("성공적으로 등록되었습니다") {
+                    dismiss()
+                }
+            }
         } message: {
             Text(alertMessage)
         }
@@ -233,104 +235,6 @@ struct ContentAddView: View {
         }
     }
     
-    // ❌ 사진 섹션 전체 주석처리
-    /*
-    private var photoSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // 섹션 헤더
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.1))
-                        .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "photo")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                
-                Text("사진")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.primary)
-                
-                Text("(선택사항)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-            }
-            
-            // 사진 선택 영역
-            HStack(spacing: 16) {
-                // 사진 추가 버튼
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    VStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(LinearGradient(
-                                    colors: [.orange.opacity(0.2), .orange.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 80, height: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .foregroundColor(.orange)
-                                
-                                Text("사진")
-                                    .font(.caption2)
-                                    .foregroundColor(.orange)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // 선택된 이미지 미리보기
-                if let img = image {
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                        
-                        // 삭제 버튼
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                image = nil
-                                photoItem = nil
-                            }
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(.red)
-                                    .frame(width: 24, height: 24)
-                                
-                                Image(systemName: "xmark")
-                                    .foregroundColor(.white)
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                            }
-                        }
-                        .offset(x: 8, y: -8)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-                
-                Spacer()
-            }
-        }
-    }
-    */
-    
     private var submitButtonView: some View {
         VStack(spacing: 0) {
             // 그라데이션 분리선
@@ -430,23 +334,7 @@ struct ContentAddView: View {
         }
     }
     
-    // ❌ 사진 로드 함수 주석처리 (이미 주석처리 되어 있음)
-    /*
-    // 선택한 사진을 UIImage로 변환하여 저장 (필요 시 사용)
-    func loadImage(from item: PhotosPickerItem?) async {
-        guard let item = item,
-              let data = try? await item.loadTransferable(type: Data.self) else {
-            return
-        }
-        
-        // UI 업데이트는 메인 스레드에서 수행
-        Task { @MainActor in
-            image = UIImage(data: data)
-        }
-    }
-    */
-    
-    //  수정: 게시글 작성 서버 요청 및 로컬 목록 추가 + 디버깅 로그 추가
+    // ✅ 수정: 게시글 작성 서버 요청 및 로컬 목록 추가 + 성공 시 alert 표시
     private func writePost() async {
         print("📝 writePost 시작")
         
@@ -506,9 +394,11 @@ struct ContentAddView: View {
             print("✅ 서버 응답 성공")
             
             await MainActor.run {
-                posts.insert(newPost, at: 0)  // 상위 뷰 게시글 목록에 추가 (Community에 즉시 반영)
+                posts.insert(newPost, at: 0)  // 상위 뷰 게시글 목록에 추가
+                uploading = false             // ✅ 수정: 상태 복원
+                alertMessage = "게시글이 성공적으로 등록되었습니다."  // ✅ 수정: 성공 메시지
+                showAlert = true             // ✅ 수정: alert 표시
                 print("✅ 게시글 작성 성공: 작성자=\(userManager.currentUserID), 시간=\(currentTime)")
-                dismiss()                   // 성공 시 현재 뷰 닫기 (uploading = false 불필요)
             }
             
         } catch {
@@ -518,13 +408,6 @@ struct ContentAddView: View {
                 alertMessage = "게시글 작성에 실패했습니다."
                 showAlert = true
                 print("❌ 게시글 작성 실패: \(error.localizedDescription)")
-            }
-        }
-        
-        // 추가: 성공/실패 관계없이 마지막에 상태 복원 (dismiss 되지 않은 경우를 위해)
-        await MainActor.run {
-            if !Task.isCancelled {  // 화면이 닫히지 않은 경우만
-                uploading = false
             }
         }
     }

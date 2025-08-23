@@ -71,8 +71,15 @@ async def insert(item: Content):
         'deleted': False,            
         'deletedAt': None            
     })
-    data['_id'] = new_object_id
-    data.pop('id', None)
+    
+    
+    # 수정: 클라이언트 UUID를 postId로 저장
+    client_id = data.pop('id', None)
+    if client_id:
+        data['postId'] = client_id
+    
+    data['_id'] = new_object_id  
+
 
     await community_collection.insert_one(data)
     return {'result': 'OK'}
@@ -86,18 +93,39 @@ async def update(id: str, patch: ContentUpdate):
     data['updatedAt'] = datetime.now(timezone.utc).isoformat()
     data.pop('id', None)
 
-    res = await community_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
+    # ✅ 수정: 두 방식 모두 지원하고 결과 확인
+    res = await community_collection.update_one({'postId': id}, {'$set': data})
+    
+    # postId로 못 찾으면 _id로 찾기 시도
+    if res.matched_count == 0:
+        try:
+            if len(id) == 24 and all(c in '0123456789abcdef' for c in id.lower()):
+                res = await community_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
+        except:
+            pass
+    
     if res.matched_count == 0:
         raise HTTPException(404, 'Content Not Found')
     return {'result': 'OK'}
+
 
 @router.delete('/community/delete/{id}')
 async def delete(id: str):
     """논리 삭제: deleted 플래그만 변경"""                
     now = datetime.now(timezone.utc).isoformat()         
-    res = await community_collection.update_one(         
-        {'_id': ObjectId(id), 'deleted': False},         
-        {'$set': {'deleted': True, 'deletedAt': now}})   
-    if res.matched_count == 0:                           
-        raise HTTPException(404, 'Content Not Found')    
+
+    # ✅ 수정: postId와 _id 모두 지원
+    res = await community_collection.update_one(
+        {'postId': id, 'deleted': False}, 
+        {'$set': {'deleted': True, 'deletedAt': now}}
+    )
+    
+    if res.matched_count == 0 and len(id) == 24:
+        res = await community_collection.update_one(
+            {'_id': ObjectId(id), 'deleted': False}, 
+            {'$set': {'deleted': True, 'deletedAt': now}}
+        )
+    
+    if res.matched_count == 0:
+        raise HTTPException(404, 'Content Not Found')
     return {'result': 'OK'}
