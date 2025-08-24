@@ -2,6 +2,14 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import pandas as pd
 import joblib
+import requests
+from datetime import datetime
+import os
+
+# OpenWeatherMap API 설정
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "your_api_key_here")
+HANGANG_LAT = 37.5097778  # 한강공원 위도
+HANGANG_LON = 126.9952838  # 한강공원 경도  
 
 
 router = APIRouter()

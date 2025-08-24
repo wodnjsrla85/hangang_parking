@@ -8,15 +8,6 @@
 import SwiftUI
 import MapKit
 
-// 날씨 정보 모델 추가
-struct WeatherInfo: Codable {
-    let title: String
-}
-
-struct WeatherResponse: Codable {
-    let results: [WeatherInfo]
-}
-
 // 예측 요청 모델
 struct PredictionRequest: Codable {
     let date: String
@@ -48,59 +39,97 @@ struct WeatherData: Codable {
     let discomfort_index: Double
 }
 
-// WeatherViewModel 추가
+// 개선된 WeatherViewModel
 @MainActor
 class WeatherViewModel: ObservableObject {
     @Published var weatherText: String = "날씨 정보 로딩 중..."
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var currentTemperature: Double = 0
+    @Published var currentHumidity: Double = 0
+    @Published var currentDiscomfortIndex: Double = 0
+    @Published var weatherDescription: String = ""
+    @Published var isConnected: Bool = false
     
-    private let baseURL = "http://127.0.0.1:8000"  // 실제 서버 IP로 변경 필요
+    private let weatherService = OpenWeatherService()
     
     func fetchWeather() async {
-        DispatchQueue.main.async {
-            self.isLoading = true
-            self.errorMessage = nil
-        }
+        isLoading = true
+        errorMessage = nil
         
-        guard let url = URL(string: "\(baseURL)/weather") else {
-            DispatchQueue.main.async {
-                self.errorMessage = "잘못된 URL"
-                self.isLoading = false
-            }
+        // API 키 확인
+        guard weatherService.isAPIKeyValid() else {
+            errorMessage = "API 키가 설정되지 않았습니다"
+            weatherText = "API 키를 설정해주세요"
+            isLoading = false
             return
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let weatherData = try await weatherService.fetchCurrentWeather()
             
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "서버 응답 오류"
-                    self.isLoading = false
-                }
-                return
-            }
+            currentTemperature = weatherData.temperature
+            currentHumidity = weatherData.humidity
+            currentDiscomfortIndex = weatherData.discomfortIndex
+            weatherDescription = weatherData.description
+            isConnected = true
             
-            let weatherResponse = try JSONDecoder().decode(WeatherResponse.self, from: data)
+            // 깔끔한 형식으로 텍스트 구성
+            weatherText = formatWeatherText(
+                temp: weatherData.temperature,
+                humidity: weatherData.humidity,
+                description: weatherData.description
+            )
             
-            DispatchQueue.main.async {
-                if let firstWeather = weatherResponse.results.first {
-                    self.weatherText = firstWeather.title
-                } else {
-                    self.weatherText = "날씨 정보 없음"
-                }
-                self.isLoading = false
-            }
+            print("✅ 날씨 업데이트 완료: \(weatherText)")
             
         } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = "날씨 정보를 가져올 수 없습니다"
-                self.weatherText = "날씨 정보 오류"
-                self.isLoading = false
+            print("❌ 날씨 가져오기 실패: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+            isConnected = false
+            
+            // 에러 상황에 따른 적절한 메시지 설정
+            if error.localizedDescription.contains("API 키") {
+                weatherText = "API 키 설정 필요"
+            } else if error.localizedDescription.contains("네트워크") {
+                weatherText = "네트워크 연결 확인 필요"
+            } else {
+                weatherText = "날씨 정보 일시적 오류"
             }
         }
+        
+        isLoading = false
+    }
+    
+    func fetchWeatherForDateTime(date: Date, hour: Int) async -> (temperature: Double, humidity: Double, description: String, discomfortIndex: Double)? {
+        guard weatherService.isAPIKeyValid() else {
+            print("⚠️ API 키가 설정되지 않음")
+            return nil
+        }
+        
+        do {
+            return try await weatherService.fetchWeatherForecast(for: date, hour: hour)
+        } catch {
+            print("❌ 예보 가져오기 실패: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    // 테스트 연결 함수
+    func testConnection() async {
+        let result = await weatherService.testConnection()
+        print("🔍 연결 테스트 결과: \(result)")
+    }
+    
+    private func formatWeatherText(temp: Double, humidity: Double, description: String) -> String {
+        // 온도는 소수점 1자리, 습도는 정수로 표시
+        let tempString = String(format: "%.1f", temp)
+        let humidityString = String(format: "%.0f", humidity)
+        
+        // 설명은 첫 글자만 대문자로 변경
+        let cleanDescription = description.isEmpty ? "맑음" : description
+        
+        return "\(tempString)°C, \(cleanDescription), 습도 \(humidityString)%"
     }
 }
 
@@ -114,17 +143,13 @@ class PredictionViewModel: ObservableObject {
     private let baseURL = "http://127.0.0.1:8000"  // 실제 서버 IP로 변경 필요
     
     func predict(request: PredictionRequest) async {
-        DispatchQueue.main.async {
-            self.isLoading = true
-            self.errorMessage = nil
-            self.predictionResult = nil
-        }
+        isLoading = true
+        errorMessage = nil
+        predictionResult = nil
         
         guard let url = URL(string: "\(baseURL)/") else {
-            DispatchQueue.main.async {
-                self.errorMessage = "잘못된 URL"
-                self.isLoading = false
-            }
+            errorMessage = "잘못된 URL"
+            isLoading = false
             return
         }
         
@@ -140,25 +165,19 @@ class PredictionViewModel: ObservableObject {
             
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "서버 응답 오류"
-                    self.isLoading = false
-                }
+                errorMessage = "서버 응답 오류"
+                isLoading = false
                 return
             }
             
             let predictionResponse = try JSONDecoder().decode(PredictionResponse.self, from: data)
             
-            DispatchQueue.main.async {
-                self.predictionResult = predictionResponse
-                self.isLoading = false
-            }
+            predictionResult = predictionResponse
+            isLoading = false
             
         } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = "예측 요청 실패: \(error.localizedDescription)"
-                self.isLoading = false
-            }
+            errorMessage = "예측 요청 실패: \(error.localizedDescription)"
+            isLoading = false
         }
     }
 }
@@ -167,14 +186,14 @@ struct MainView: View {
     @StateObject private var viewModel = MarkerViewModel()
     @StateObject private var weatherViewModel = WeatherViewModel()
     @StateObject private var predictionViewModel = PredictionViewModel()
-    @EnvironmentObject var userManager: UserManager // UserManager 추가
+    @EnvironmentObject var userManager: UserManager
     @State private var selectedCategory: String = "전체"
     @State private var selectedMarker: Marker?
     @State private var showingBottomSheet = false
     @State private var showingCategoryList = false
-    @State private var showingLoginSheet = false // 로그인 시트 상태 추가
-    @State private var showingLogoutAlert = false // 로그아웃 확인 알림 추가
-    @State private var showingPredictionSheet = false // 예측 시트 상태 추가
+    @State private var showingLoginSheet = false
+    @State private var showingLogoutAlert = false
+    @State private var showingPredictionSheet = false
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.5097778, longitude: 126.9952838),
@@ -249,15 +268,12 @@ struct MainView: View {
                             }
                         )
                         
-                        // 새로고침 버튼
+                        // 예측 버튼
                         FloatingActionButton(
-                            icon: "arrow.clockwise",
-                            color: .green,
+                            icon: "chart.line.uptrend.xyaxis",
+                            color: .purple,
                             action: {
-                                Task {
-                                    await viewModel.loadMarkers()
-                                    await weatherViewModel.fetchWeather()
-                                }
+                                showingPredictionSheet = true
                             }
                         )
                     }
@@ -302,9 +318,12 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showingPredictionSheet) {
-            PredictionSheet(predictionViewModel: predictionViewModel)
-                .presentationDetents([.height(600), .large])
-                .presentationDragIndicator(.visible)
+            PredictionSheet(
+                predictionViewModel: predictionViewModel,
+                weatherViewModel: weatherViewModel
+            )
+            .presentationDetents([.height(700), .large])
+            .presentationDragIndicator(.visible)
         }
         .alert("로그아웃", isPresented: $showingLogoutAlert) {
             Button("로그아웃", role: .destructive) {
@@ -315,118 +334,63 @@ struct MainView: View {
             Text("정말로 로그아웃 하시겠습니까?")
         }
     }
-    
-    // 마커 타입에 따른 아이콘 반환
-    private func getIconForType(_ type: String) -> String {
-        switch type.lowercased() {
-        case "액티비티": return "figure.run"
-        case "매점": return "basket.fill"
-        case "공연": return "music.note"
-        case "주차장": return "car.fill"
-        case "화장실": return "toilet.fill"
-        case "민간시설": return "building.2.fill"
-        case "안내센터": return "info.circle.fill"
-        case "출입구": return "door.left.hand.open"
-        case "응급시설": return "cross.case.fill"
-        case "흡연부스": return "smoke.fill"
-        case "편의시설": return "wrench.and.screwdriver.fill"
-        case "직영시설": return "house.fill"
-        case "광장": return "square.grid.3x3.fill"
-        case "승강장": return "tram.fill"
-        default: return "mappin.circle.fill"
-        }
-    }
-    
-    // 마커 타입에 따른 색상 반환
-    private func getColorForType(_ type: String) -> Color {
-        switch type.lowercased() {
-        case "액티비티": return .green
-        case "매점": return .orange
-        case "공연": return .purple
-        case "주차장": return .gray
-        case "화장실": return .blue
-        case "민간시설": return .brown
-        case "안내센터": return .cyan
-        case "출입구": return .indigo
-        case "응급시설": return .red
-        case "흡연부스": return .secondary
-        case "편의시설": return .mint
-        case "직영시설": return .teal
-        case "광장": return .yellow
-        case "승강장": return .pink
-        case "전체": return .blue
-        default: return .black
-        }
-    }
 }
 
-// MARK: - 예측 시트
+// MARK: - 자동 피크시간 계산이 포함된 PredictionSheet
 struct PredictionSheet: View {
     @ObservedObject var predictionViewModel: PredictionViewModel
+    @ObservedObject var weatherViewModel: WeatherViewModel
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedDate = Date()
     @State private var selectedHour = 12
-    @State private var discomfortIndex = 0.0 // 0으로 초기화 (자동 계산)
+    @State private var discomfortIndex = 0.0
     @State private var isPeakTime = false
     @State private var isLoadingWeather = false
     @State private var weatherInfo: String = "날씨 정보 로딩 중..."
+    @State private var isAutoDiscomfort = true // 자동 계산 모드
+    @State private var isAutoPeakTime = true // 자동 피크시간 계산 모드 추가
     
     // 2025년 공휴일 목록 (월-일 형태)
     private let holidays2025: Set<String> = [
-        "01-01", // 신정
-        "01-28", "01-29", "01-30", // 설날
-        "03-01", // 삼일절
-        "05-05", // 어린이날
-        "05-15", // 부처님오신날
-        "06-06", // 현충일
-        "08-15", // 광복절
-        "10-03", "10-06", // 추석
-        "10-09", // 한글날
-        "12-25"  // 크리스마스
+        "01-01", "01-28", "01-29", "01-30", "03-01", "05-05",
+        "05-15", "06-06", "08-15", "10-03", "10-06", "10-09", "12-25"
     ]
     
-    // 예측 가능한 시간 범위 계산
     private var availableHours: [Int] {
         let calendar = Calendar.current
         let now = Date()
         let selectedDateComponents = calendar.dateComponents([.year, .month, .day], from: selectedDate)
         let todayComponents = calendar.dateComponents([.year, .month, .day], from: now)
         
-        // 선택된 날짜가 오늘인지 확인
         if selectedDateComponents == todayComponents {
             let currentHour = calendar.component(.hour, from: now)
-            let maxHour = min(23, currentHour + 12) // 현재 시간 + 12시간 또는 23시 중 작은 값
+            let maxHour = min(23, currentHour + 12)
             return Array(currentHour...maxHour)
         } else {
-            return [] // 오늘이 아니면 빈 배열
+            return []
         }
     }
     
-    // 오늘만 선택 가능한 날짜 범위
     private var dateRange: ClosedRange<Date> {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         return today...today
     }
     
-    // 선택된 날짜에 따른 모드 자동 결정
     private var autoMode: String {
         let month = Calendar.current.component(.month, from: selectedDate)
         return [3, 4, 7, 8, 11].contains(month) ? "승차" : "하차"
     }
     
-    // 선택된 날짜의 공휴일 여부 자동 결정
     private var isAutoHoliday: Bool {
         let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: selectedDate) // 1=일요일, 7=토요일
+        let weekday = calendar.component(.weekday, from: selectedDate)
         
-        // 주말인지 확인
         if weekday == 1 || weekday == 7 {
             return true
         }
         
-        // 공휴일인지 확인
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MM-dd"
         let dateString = dateFormatter.string(from: selectedDate)
@@ -434,18 +398,60 @@ struct PredictionSheet: View {
         return holidays2025.contains(dateString)
     }
     
+    // 자동 피크시간 계산 함수
+    private var autoPeakTime: Bool {
+        let currentMode = autoMode
+        let isHoliday = isAutoHoliday
+        
+        if currentMode == "승차" {
+            if isHoliday {
+                // 공휴일 승차 피크시간: 19, 20, 21, 22시
+                return [19, 20, 21, 22].contains(selectedHour)
+            } else {
+                // 평일 승차 피크시간: 20, 21, 22시
+                return [20, 21, 22].contains(selectedHour)
+            }
+        } else { // 하차
+            if isHoliday {
+                // 공휴일 하차 피크시간: 16, 17, 18, 19, 20시
+                return [16, 17, 18, 19, 20].contains(selectedHour)
+            } else {
+                // 평일 하차 피크시간: 18, 19, 20시
+                return [18, 19, 20].contains(selectedHour)
+            }
+        }
+    }
+    
+    // 피크시간 설명 텍스트
+    private var peakTimeDescription: String {
+        let currentMode = autoMode
+        let isHoliday = isAutoHoliday
+        
+        if currentMode == "승차" {
+            if isHoliday {
+                return "공휴일 승차 피크시간: 19~22시"
+            } else {
+                return "평일 승차 피크시간: 20~22시"
+            }
+        } else { // 하차
+            if isHoliday {
+                return "공휴일 하차 피크시간: 16~20시"
+            } else {
+                return "평일 하차 피크시간: 18~20시"
+            }
+        }
+    }
+    
     var body: some View {
         NavigationView {
             Form {
-                Section("기본 정보") {
+                Section("예측 설정") {
                     DatePicker("날짜 선택", selection: $selectedDate, in: dateRange, displayedComponents: .date)
                         .datePickerStyle(CompactDatePickerStyle())
                         .onChange(of: selectedDate) { _ in
-                            // 날짜 변경 시 첫 번째 가능한 시간으로 설정
                             if let firstHour = availableHours.first {
                                 selectedHour = firstHour
                             }
-                            // 날씨 정보 자동 로드
                             Task {
                                 await loadWeatherInfo()
                             }
@@ -464,99 +470,11 @@ struct PredictionSheet: View {
                         .pickerStyle(WheelPickerStyle())
                         .frame(height: 120)
                         .onChange(of: selectedHour) { _ in
-                            // 시간 변경 시 날씨 정보 업데이트
                             Task {
                                 await loadWeatherInfo()
                             }
                         }
                     }
-                    
-                    // 자동 결정된 모드 표시
-                    HStack {
-                        Text("모드")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(autoMode)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(autoMode == "승차" ? Color.blue.opacity(0.1) : Color.orange.opacity(0.1))
-                            )
-                    }
-                    
-                    // 자동 결정된 공휴일 여부 표시
-                    HStack {
-                        Text("공휴일/주말")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(isAutoHoliday ? "예" : "아니오")
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(isAutoHoliday ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
-                            )
-                    }
-                }
-                
-                Section("날씨 및 설정") {
-                    // 날씨 정보 표시
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("날씨 정보")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Spacer()
-                            if isLoadingWeather {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            }
-                        }
-                        
-                        Text(weatherInfo)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(.systemGray6))
-                            )
-                    }
-                    
-                    // 자동 계산된 불쾌지수 표시
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("불쾌지수: \(discomfortIndex == 0 ? "자동 계산" : String(format: "%.1f", discomfortIndex))")
-                            .font(.subheadline)
-                        
-                        if discomfortIndex == 0 {
-                            Text("날씨 정보를 바탕으로 자동 계산됩니다")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        } else {
-                            HStack {
-                                Text("수동 조정:")
-                                    .font(.caption)
-                                Slider(value: $discomfortIndex, in: 0...100, step: 1)
-                                Button("자동") {
-                                    discomfortIndex = 0
-                                    Task {
-                                        await loadWeatherInfo()
-                                    }
-                                }
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(6)
-                            }
-                        }
-                    }
-                    
-                    Toggle("피크타임", isOn: $isPeakTime)
                 }
                 
                 Section("예측 결과") {
@@ -594,7 +512,6 @@ struct PredictionSheet: View {
                 .disabled(predictionViewModel.isLoading || availableHours.isEmpty)
             )
             .onAppear {
-                // 초기 로드 시 날짜를 오늘로 설정하고 첫 번째 가능한 시간 선택
                 selectedDate = Date()
                 if let firstHour = availableHours.first {
                     selectedHour = firstHour
@@ -609,31 +526,25 @@ struct PredictionSheet: View {
     private func loadWeatherInfo() async {
         isLoadingWeather = true
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: selectedDate)
-        
-        // 실제 날씨 API 호출 시뮬레이션 (여기서는 Mock 데이터 사용)
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1초 대기
-        
-        // Mock 날씨 데이터 (실제로는 OpenWeatherMap API 호출)
-        let mockTemp = Double.random(in: 15...30)
-        let mockHumidity = Double.random(in: 40...80)
-        let mockDiscomfort = calculateDiscomfortIndex(temp: mockTemp, humidity: mockHumidity)
-        
-        await MainActor.run {
-            weatherInfo = String(format: "기온: %.1f°C, 습도: %.0f%%, 불쾌지수: %.1f", mockTemp, mockHumidity, mockDiscomfort)
-            if discomfortIndex == 0 { // 자동 계산 모드일 때만 업데이트
-                discomfortIndex = mockDiscomfort
+        // 실제 OpenWeatherMap API 호출
+        if let weatherData = await weatherViewModel.fetchWeatherForDateTime(date: selectedDate, hour: selectedHour) {
+            await MainActor.run {
+                weatherInfo = String(format: "기온: %.1f°C, 습도: %.0f%%, %s",
+                                   weatherData.temperature,
+                                   weatherData.humidity,
+                                   weatherData.description)
+                
+                if isAutoDiscomfort {
+                    discomfortIndex = weatherData.discomfortIndex
+                }
+                isLoadingWeather = false
             }
-            isLoadingWeather = false
+        } else {
+            await MainActor.run {
+                weatherInfo = "날씨 정보를 가져올 수 없습니다"
+                isLoadingWeather = false
+            }
         }
-    }
-    
-    private func calculateDiscomfortIndex(temp: Double, humidity: Double) -> Double {
-        // 불쾌지수 계산 공식
-        let discomfort = 1.8 * temp - 0.55 * (1 - humidity/100) * (1.8 * temp - 26) + 32
-        return max(0, min(100, discomfort))
     }
     
     private func performPrediction() {
@@ -643,16 +554,30 @@ struct PredictionSheet: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
+        // 불쾌지수 결정
+        let finalDiscomfortIndex = isAutoDiscomfort ? discomfortIndex : discomfortIndex
+        
+        // 피크시간 결정
+        let finalPeakTime = isAutoPeakTime ? autoPeakTime : isPeakTime
+        
         let request = PredictionRequest(
             date: dateFormatter.string(from: selectedDate),
             hour: selectedHour,
             holiday: isAutoHoliday ? 1 : 0,
-            discomfort: discomfortIndex == 0 ? discomfortIndex : discomfortIndex, // 0이면 서버에서 자동 계산
-            peak: isPeakTime ? 1 : 0,
+            discomfort: finalDiscomfortIndex,
+            peak: finalPeakTime ? 1 : 0, // 자동 계산된 피크시간 사용
             month: calendar.component(.month, from: selectedDate),
-            weekday: calendar.component(.weekday, from: selectedDate) - 1, // 0-6 (월-일)
+            weekday: calendar.component(.weekday, from: selectedDate) - 1,
             mode: autoMode
         )
+        
+        print("🚗 예측 요청 정보:")
+        print("   날짜: \(dateFormatter.string(from: selectedDate))")
+        print("   시간: \(selectedHour)시")
+        print("   모드: \(autoMode)")
+        print("   공휴일: \(isAutoHoliday ? "예" : "아니오")")
+        print("   피크시간: \(finalPeakTime ? "예" : "아니오") (\(isAutoPeakTime ? "자동" : "수동"))")
+        print("   불쾌지수: \(String(format: "%.1f", finalDiscomfortIndex)) (\(isAutoDiscomfort ? "자동" : "수동"))")
         
         Task {
             await predictionViewModel.predict(request: request)
@@ -660,9 +585,13 @@ struct PredictionSheet: View {
     }
 }
 
-// MARK: - 예측 결과 뷰
+// MARK: - PredictionResultView
 struct PredictionResultView: View {
     let result: PredictionResponse
+    
+    // 주차장별 최대 주차대수
+    private let maxParkingPanpo1 = 332
+    private let maxParkingPanpo23 = 337
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -672,31 +601,19 @@ struct PredictionResultView: View {
             
             VStack(spacing: 8) {
                 PredictionResultRow(
-                    title: "반포1주차장 (일별)",
-                    value: result.daily_parking_panpo1,
-                    icon: "calendar",
+                    title: "반포1주차장",
+                    value: result.hourly_parking_panpo1,
+                    maxValue: maxParkingPanpo1,
+                    icon: "car.fill",
                     color: .blue
                 )
                 
                 PredictionResultRow(
-                    title: "반포2,3주차장 (일별)",
-                    value: result.daily_parking_panpo23,
-                    icon: "calendar",
-                    color: .green
-                )
-                
-                PredictionResultRow(
-                    title: "반포1주차장 (시간별)",
-                    value: result.hourly_parking_panpo1,
-                    icon: "clock",
-                    color: .orange
-                )
-                
-                PredictionResultRow(
-                    title: "반포2,3주차장 (시간별)",
+                    title: "반포2,3주차장",
                     value: result.hourly_parking_panpo23,
-                    icon: "clock",
-                    color: .purple
+                    maxValue: maxParkingPanpo23,
+                    icon: "car.fill",
+                    color: .green
                 )
             }
         }
@@ -708,36 +625,194 @@ struct PredictionResultView: View {
     }
 }
 
-// MARK: - 예측 결과 행
+// MARK: - PredictionResultRow
 struct PredictionResultRow: View {
     let title: String
     let value: Double
+    let maxValue: Int
     let icon: String
     let color: Color
     
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 20)
-            
-            Text(title)
-                .font(.subheadline)
-            
-            Spacer()
-            
-            Text("\(Int(value.rounded()))")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(color)
+    // 예측값이 최대값을 넘는지 확인
+    private var isOverCapacity: Bool {
+        value > Double(maxValue)
+    }
+    
+    // 실제 표시할 값 (최대값 초과 시 최대값으로 제한)
+    private var displayValue: Int {
+        if isOverCapacity {
+            return maxValue
+        } else {
+            return Int(value.rounded())
         }
-        .padding(.vertical, 2)
+    }
+    
+    // 주차 상황에 따른 색상 결정
+    private var statusColor: Color {
+        if isOverCapacity {
+            return .red
+        }
+        
+        let percentage = (value / Double(maxValue)) * 100
+        if percentage >= 90 {
+            return .red // 거의 만차
+        } else if percentage >= 70 {
+            return .orange // 혼잡
+        } else if percentage >= 50 {
+            return .yellow // 보통
+        } else {
+            return .green // 여유
+        }
+    }
+    
+    // 상태 텍스트
+    private var statusText: String {
+        if isOverCapacity {
+            return "주차 불가"
+        }
+        
+        let percentage = (value / Double(maxValue)) * 100
+        if percentage >= 90 {
+            return "거의 만차"
+        } else if percentage >= 70 {
+            return "혼잡"
+        } else if percentage >= 50 {
+            return "보통"
+        } else {
+            return "여유"
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                    .frame(width: 20)
+                
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    if isOverCapacity {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                            Text("만차")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                        }
+                    } else {
+                        Text("\(displayValue) / \(maxValue)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(color)
+                    }
+                    
+                    Text(statusText)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(statusColor.opacity(0.1))
+                        )
+                }
+            }
+            
+            // 진행률 바
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .frame(width: geometry.size.width, height: 6)
+                        .opacity(0.3)
+                        .foregroundColor(Color(.systemGray4))
+                        .cornerRadius(3)
+                    
+                    Rectangle()
+                        .frame(width: isOverCapacity ? geometry.size.width : min(CGFloat(value / Double(maxValue)) * geometry.size.width, geometry.size.width), height: 6)
+                        .foregroundColor(statusColor)
+                        .cornerRadius(3)
+                        .animation(.easeInOut(duration: 0.5), value: value)
+                }
+            }
+            .frame(height: 6)
+            
+            // 주차 불가 메시지
+            if isOverCapacity {
+                HStack {
+                    Image(systemName: "car.circle.fill")
+                        .foregroundColor(.red)
+                    Text("해당 시간대에는 주차장이 만차 예상됩니다")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .fontWeight(.medium)
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.red.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
-// MARK: - 모던 날씨 카드
+// MARK: - ModernWeatherCard
 struct ModernWeatherCard: View {
     @ObservedObject var weatherViewModel: WeatherViewModel
+    
+    // 날씨 설명에 따른 아이콘 결정
+    private func getWeatherIcon() -> String {
+        if weatherViewModel.isLoading {
+            return "cloud"
+        }
+        
+        let description = weatherViewModel.weatherDescription.lowercased()
+        
+        if description.contains("맑") || description.contains("clear") {
+            return "sun.max.fill"
+        } else if description.contains("구름") || description.contains("cloud") {
+            return "cloud.fill"
+        } else if description.contains("비") || description.contains("rain") {
+            return "cloud.rain.fill"
+        } else if description.contains("눈") || description.contains("snow") {
+            return "cloud.snow.fill"
+        } else if description.contains("안개") || description.contains("fog") {
+            return "cloud.fog.fill"
+        } else {
+            return "cloud.sun.fill"
+        }
+    }
+    
+    // 날씨에 따른 아이콘 색상
+    private func getWeatherIconColor() -> Color {
+        let description = weatherViewModel.weatherDescription.lowercased()
+        
+        if description.contains("맑") || description.contains("clear") {
+            return .orange
+        } else if description.contains("비") || description.contains("rain") {
+            return .blue
+        } else if description.contains("눈") || description.contains("snow") {
+            return .cyan
+        } else {
+            return .gray
+        }
+    }
     
     var body: some View {
         HStack(spacing: 16) {
@@ -745,15 +820,24 @@ struct ModernWeatherCard: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [.orange.opacity(0.3), .orange.opacity(0.1)],
+                        colors: [
+                            getWeatherIconColor().opacity(0.3),
+                            getWeatherIconColor().opacity(0.1)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
                     .frame(width: 50, height: 50)
                 
-                Image(systemName: "cloud.sun.fill")
-                    .foregroundColor(.orange)
-                    .font(.title2)
+                if weatherViewModel.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .progressViewStyle(CircularProgressViewStyle(tint: getWeatherIconColor()))
+                } else {
+                    Image(systemName: getWeatherIcon())
+                        .foregroundColor(getWeatherIconColor())
+                        .font(.title2)
+                }
             }
             
             // 날씨 정보
@@ -765,16 +849,23 @@ struct ModernWeatherCard: View {
                 
                 if weatherViewModel.isLoading {
                     HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8)
                         Text("로딩 중...")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                 } else if let errorMessage = weatherViewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(weatherViewModel.weatherText)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .fontWeight(.medium)
+                        
+                        if errorMessage.contains("API 키") {
+                            Text("설정에서 API 키 확인")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                    }
                 } else {
                     Text(weatherViewModel.weatherText)
                         .font(.subheadline)
@@ -792,16 +883,23 @@ struct ModernWeatherCard: View {
                     await weatherViewModel.fetchWeather()
                 }
             }) {
-                Image(systemName: "arrow.clockwise")
-                    .foregroundColor(.blue)
+                Image(systemName: weatherViewModel.isLoading ? "arrow.clockwise" : (weatherViewModel.isConnected ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"))
+                    .foregroundColor(weatherViewModel.isConnected ? .green : .red)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 32, height: 32)
-                    .background(Color.blue.opacity(0.1))
+                    .background(
+                        (weatherViewModel.isConnected ? Color.green : Color.red).opacity(0.1)
+                    )
                     .clipShape(Circle())
+                    .rotationEffect(.degrees(weatherViewModel.isLoading ? 360 : 0))
+                    .animation(
+                        weatherViewModel.isLoading ?
+                        .linear(duration: 1.0).repeatForever(autoreverses: false) :
+                        .default,
+                        value: weatherViewModel.isLoading
+                    )
             }
             .disabled(weatherViewModel.isLoading)
-            .scaleEffect(weatherViewModel.isLoading ? 0.9 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: weatherViewModel.isLoading)
         }
         .padding(20)
         .background(
@@ -809,14 +907,30 @@ struct ModernWeatherCard: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .stroke(
+                            weatherViewModel.isConnected ?
+                            Color.green.opacity(0.3) :
+                            Color.red.opacity(0.3),
+                            lineWidth: 1
+                        )
                 )
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .shadow(
+                    color: .black.opacity(0.1),
+                    radius: 10,
+                    x: 0,
+                    y: 5
+                )
         )
+        .onAppear {
+            // 앱 시작 시 연결 테스트
+            Task {
+                await weatherViewModel.testConnection()
+            }
+        }
     }
 }
 
-// MARK: - 카테고리 선택 뷰
+// MARK: - CategorySelectionView
 struct CategorySelectionView: View {
     let categories: [String]
     @Binding var selectedCategory: String
@@ -856,49 +970,11 @@ struct CategorySelectionView: View {
             
             Spacer()
             
-            // 예측 버튼
-            Button(action: {
-                showingPredictionSheet = true
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 16, weight: .bold))
-                    
-                    Text("예측")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.indigo, Color.purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-                        .shadow(
-                            color: Color.indigo.opacity(0.4),
-                            radius: 8,
-                            x: 0,
-                            y: 4
-                        )
-                )
-            }
-            
             // 로그인/로그아웃 버튼
             Button(action: {
                 if userManager.isLoggedIn {
-                    // 로그아웃 확인 알림 표시
                     showingLogoutAlert = true
                 } else {
-                    // 로그인 시트 표시
                     showingLoginSheet = true
                 }
             }) {
@@ -964,7 +1040,7 @@ struct CategorySelectionView: View {
     }
 }
 
-// MARK: - 모던 마커 뷰
+// MARK: - ModernMarkerView
 struct ModernMarkerView: View {
     let marker: Marker
     let action: () -> Void
@@ -1027,7 +1103,7 @@ struct ModernMarkerView: View {
     }
 }
 
-// MARK: - 플로팅 액션 버튼
+// MARK: - FloatingActionButton
 struct FloatingActionButton: View {
     let icon: String
     let color: Color
@@ -1048,7 +1124,7 @@ struct FloatingActionButton: View {
     }
 }
 
-// MARK: - 로딩 오버레이
+// MARK: - LoadingOverlay
 struct LoadingOverlay: View {
     var body: some View {
         ZStack {
@@ -1074,7 +1150,7 @@ struct LoadingOverlay: View {
     }
 }
 
-// MARK: - 에러 토스트
+// MARK: - ErrorToast
 struct ErrorToast: View {
     let message: String
     
@@ -1096,12 +1172,12 @@ struct ErrorToast: View {
                     .shadow(radius: 10)
             )
             .padding(.horizontal)
-            .padding(.bottom, 140) // 탭바 위에 표시
+            .padding(.bottom, 140)
         }
     }
 }
 
-// MARK: - 모던 마커 상세 시트
+// MARK: - ModernMarkerDetailSheet
 struct ModernMarkerDetailSheet: View {
     let marker: Marker
     
@@ -1225,7 +1301,7 @@ struct ModernMarkerDetailSheet: View {
     }
 }
 
-// MARK: - 모던 정보 행
+// MARK: - ModernInfoRow
 struct ModernInfoRow: View {
     let icon: String
     let title: String
@@ -1261,7 +1337,7 @@ struct ModernInfoRow: View {
     }
 }
 
-// MARK: - 카테고리 리스트 시트
+// MARK: - CategoryListSheet
 struct CategoryListSheet: View {
     let categories: [String]
     @Binding var selectedCategory: String
@@ -1289,6 +1365,7 @@ struct CategoryListSheet: View {
     }
 }
 
+// MARK: - CategoryListItem
 struct CategoryListItem: View {
     let category: String
     let isSelected: Bool
