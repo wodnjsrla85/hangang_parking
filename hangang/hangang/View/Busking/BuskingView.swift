@@ -56,7 +56,7 @@ struct BuskingView: View {
                             Text("Approved Busking")
                                 .font(.title2.bold())
                                 .foregroundColor(.primary)
-                            Text("승인된 버스킹 일정")
+                            Text("예정된 버스킹 일정")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -95,7 +95,7 @@ struct BuskingView: View {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 8, height: 8)
-                            Text("승인된 버스킹")
+                            Text("예정된 버스킹")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(.primary)
                             Spacer()
@@ -154,10 +154,10 @@ struct BuskingView: View {
                             Image(systemName: "checkmark.circle")
                                 .font(.system(size: 50))
                                 .foregroundColor(.green)
-                            Text("승인된 버스킹이 없습니다")
+                            Text("예정된 버스킹이 없습니다")
                                 .font(.headline)
                                 .foregroundColor(.gray)
-                            Text("승인 완료된 버스킹만 표시됩니다")
+                            Text("예정된 버스킹만 표시됩니다")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -194,7 +194,7 @@ struct BuskingView: View {
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
-                                    .frame(width: 100, alignment: .leading)
+                                    .frame(width: 80, alignment: .leading)
                                     
                                     Spacer()
                                     
@@ -206,16 +206,6 @@ struct BuskingView: View {
                                         Text(row.category)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
-                                    }
-                                    
-                                    // 승인 상태 인디케이터
-                                    HStack(spacing: 4) {
-                                        Circle()
-                                            .fill(Color.green)
-                                            .frame(width: 8, height: 8)
-                                        Text("승인")
-                                            .font(.caption2.weight(.medium))
-                                            .foregroundColor(.green)
                                     }
                                 }
                                 .padding(.vertical, 16)

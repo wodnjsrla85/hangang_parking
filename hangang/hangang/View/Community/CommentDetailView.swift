@@ -55,7 +55,15 @@ struct CommentDetail: View {
     var body: some View {
         ZStack {
             backgroundView
-            mainContentView
+            
+            
+            ScrollView {
+                VStack(spacing: 0) {
+                    postCardView       // 게시글
+                    commentSectionView // 댓글 목록
+                }
+                .padding(.bottom, 200) // 입력창 고려
+            }
             bottomInputView
         }
         .navigationTitle("")

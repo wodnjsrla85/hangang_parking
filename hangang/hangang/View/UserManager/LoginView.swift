@@ -274,28 +274,6 @@ struct LoginView: View {
                         .disabled(!isFormValid || isLoading)
                         .animation(.easeInOut(duration: 0.3), value: isFormValid)
                         
-                        // 임시 로그인 버튼 (개발용)
-                        Button("임시 로그인 (개발용)") {
-                            Task {
-                                await userManager.tempLogin()
-                                onLoginSuccess()
-                                dismiss()
-                            }
-                        }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.orange)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(
-                            Capsule()
-                                .fill(Color.orange.opacity(0.1))
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                )
-                        )
-                        
                         Spacer()
                             .frame(height: 40)
                     }
