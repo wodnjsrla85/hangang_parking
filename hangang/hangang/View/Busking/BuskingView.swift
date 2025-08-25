@@ -102,64 +102,64 @@ struct BuskingView: View {
                     } else {
                         LazyVStack(spacing: 8) {
                             ForEach(buskingModel, id: \._id) { row in
-                            HStack(spacing: 16) {
-                                // 시간 섹션
-                                VStack(spacing: 2) {
-                                    Text(dateFromDateString(row.date))
-                                        .font(.caption.weight(.medium))
-                                        .foregroundColor(.blue)
-                                    Text(timeFromDate(row.date))
-                                        .font(.title3.bold())
-                                        .foregroundColor(.blue)
-                                    Text("DATE & TIME")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                HStack(spacing: 16) {
+                                    // 시간 섹션 (날짜와 시간 모두 표시)
+                                    VStack(spacing: 2) {
+                                        Text(dateFromDateString(row.date))
+                                            .font(.caption.weight(.medium))
+                                            .foregroundColor(.blue)
+                                        Text(timeFromDate(row.date))
+                                            .font(.title3.bold())
+                                            .foregroundColor(.blue)
+                                        Text("DATE & TIME")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(width: 80, alignment: .center)
+                                    
+                                    // 구분선
+                                    Rectangle()
+                                        .fill(Color(.systemGray4))
+                                        .frame(width: 1, height: 35)
+                                    
+                                    // 아티스트
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(row.bandName)
+                                            .font(.headline.weight(.medium))
+                                            .foregroundColor(.primary)
+                                        Text("Artist")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(width: 100, alignment: .leading)
+                                    
+                                    Spacer()
+                                    
+                                    // 장르
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "music.note")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                        Text(row.category)
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundColor(.primary)
+                                    }
+                                    
+                                    // 상태 인디케이터
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 8, height: 8)
                                 }
-                                .frame(width: 80, alignment: .center)
-                                
-                                // 구분선
-                                Rectangle()
-                                    .fill(Color(.systemGray4))
-                                    .frame(width: 1, height: 35)
-                                
-                                // 아티스트
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(row.bandName)
-                                        .font(.headline.weight(.medium))
-                                        .foregroundColor(.primary)
-                                    Text("Artist")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(width: 100, alignment: .leading)
-                                
-                                Spacer()
-                                
-                                // 장르
-                                HStack(spacing: 6) {
-                                    Image(systemName: "music.note")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
-                                    Text(row.category)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
-                                }
-                                
-                                // 상태 인디케이터
-                                Circle()
-                                    .fill(Color.green)
-                                    .frame(width: 8, height: 8)
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 20)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(.ultraThinMaterial)
+                                        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+                                )
+                                .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial)
-                                    .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-                            )
-                            .padding(.horizontal, 16)
                         }
-                    }
                     }
                     
                     // 액션 버튼들 (모던한 스타일)
