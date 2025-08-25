@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hangangweb/VM/buskingvm.dart';
+import 'package:hangangweb/VM/buskingHandler.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
 import 'package:hangangweb/View/busking/buskingview.dart';
-import 'package:hangangweb/View/community_admin_view.dart';
+import 'package:hangangweb/View/Community/community_admin_view.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 

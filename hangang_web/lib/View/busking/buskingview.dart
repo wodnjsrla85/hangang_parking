@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hangangweb/Model/busking.dart';
 import 'package:hangangweb/VM/buskingHandler.dart';
+import 'package:hangangweb/VM/inquiryHandler.dart';
+import 'package:hangangweb/View/login_view.dart';
 
 class Buskingview extends StatefulWidget {
   final BuskingHandler handler;
-  const Buskingview({super.key, required this.handler});
+  Buskingview({super.key, required this.handler});
 
   @override
   State<Buskingview> createState() => _BuskingviewState();
 }
 
 class _BuskingviewState extends State<Buskingview> {
+
+  final InquiryHandler adminhandler = InquiryHandler();
+  bool isLoading = true;
+
   static const stateLabels = {
     0: '승인대기',
     1: '승인',
@@ -46,7 +53,7 @@ class _BuskingviewState extends State<Buskingview> {
     if (!r.success) {
       _toast(r.message);
     }
-    setState(() {});
+    setState(() => isLoading = false);
   }
 
   void _toast(String msg) {
@@ -107,7 +114,7 @@ class _BuskingviewState extends State<Buskingview> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = widget.handler.isLoading;
+    // final isLoading = widget.handler.isLoading;
 
     return Scaffold(
       backgroundColor: Color(0xFFF8FAFC),
@@ -139,6 +146,32 @@ class _BuskingviewState extends State<Buskingview> {
           ],
         ),
         actions: [
+          // 관리자 정보 표시
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Color(0xFF667eea).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Color(0xFF667eea).withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.account_circle, color: Color(0xFF667eea), size: 16),
+                SizedBox(width: 6),
+                Text(
+                  '${adminhandler.currentAdmin?.id ?? "관리자"}',
+                  style: TextStyle(
+                    color: Color(0xFF667eea),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 10),
           // 새로고침 버튼
           Container(
             margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -150,11 +183,65 @@ class _BuskingviewState extends State<Buskingview> {
             ),
             child: IconButton(
               icon: Icon(Icons.refresh, color: Colors.white),
-              onPressed: _load,
+              onPressed: () {
+                setState(() => isLoading = true);
+                _load();
+              },
               tooltip: '새로고침',
             ),
           ),
-          SizedBox(width: 8),
+          // 로그아웃 버튼
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFef4444), Color(0xFFef4444)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.logout, color: Colors.white),
+              onPressed: () async {
+                final result = await Get.dialog<bool>(
+                  AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    backgroundColor: Colors.white,
+                    title: Row(
+                      children: [
+                        Icon(Icons.logout, color: Color(0xFFef4444)),
+                        SizedBox(width: 8),
+                        Text('로그아웃'),
+                      ],
+                    ),
+                    content: Text('정말 로그아웃 하시겠습니까?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Get.back(result: false),
+                        child: Text('취소', style: TextStyle(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Get.back(result: true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFef4444),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text('로그아웃', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+                if (result == true) {
+                  await adminhandler.adminLogout();
+                  Get.offAll(() => LoginView());
+                }
+              },
+              tooltip: '로그아웃',
+            ),
+          ),
         ],
       ),
       body: Column(
@@ -326,15 +413,15 @@ class _BuskingviewState extends State<Buskingview> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Color(0xFF667eea),
-        onPressed: _load,
-        icon: Icon(Icons.refresh, color: Colors.white),
-        label: Text(
-          '새로고침',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   backgroundColor: Color(0xFF667eea),
+      //   onPressed: _load,
+      //   icon: Icon(Icons.refresh, color: Colors.white),
+      //   label: Text(
+      //     '새로고침',
+      //     style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      //   ),
+      // ),
     );
   }
 

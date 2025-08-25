@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
-import '../VM/community_handler.dart';
-import '../VM/comment_handler.dart';
-import '../Model/community.dart';
-import '../Model/comment.dart';
+import '../../VM/community_handler.dart';
+import '../../VM/comment_handler.dart';
+import '../../Model/community.dart';
+import '../../Model/comment.dart';
 
 class CommunityAdminView extends StatefulWidget {
   const CommunityAdminView({super.key});
@@ -89,7 +89,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -168,7 +168,9 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
                 colors: [Color(0xFFef4444), Color(0xFFef4444)],
               ),
               borderRadius: BorderRadius.circular(8),
+              
             ),
+            
             child: IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),
               onPressed: () => _showLogoutDialog(),
@@ -912,6 +914,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        backgroundColor: Colors.white,
         title: const Row(
           children: [
             Icon(Icons.logout, color: Color(0xFFef4444)),
