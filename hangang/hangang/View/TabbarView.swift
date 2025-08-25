@@ -72,7 +72,7 @@ struct LiquidGlassTabBar: View {
     private let tabItems: [(icon: String, activeIcon: String, title: String, color: Color)] = [
         ("house", "house.fill", "", .blue),
         ("bell", "bell.fill", "", .orange),
-        ("music.mic", "music.mic.fill", "", .yellow), // ✅ 버스킹 탭 버튼 추가
+        ("mic", "mic.fill", "", .yellow), // ✅ 버스킹 탭 버튼 추가
         ("person.3", "person.3.fill", "", .green)  // ✅ 커뮤니티 탭 버튼 추가
     ]
     
@@ -141,6 +141,16 @@ struct LiquidGlassTabButton: View {
     let action: () -> Void
     @State private var isPressed = false
     
+    // 아이콘 색상을 동적으로 결정하는 computed property 추가
+    private var iconColor: Color {
+        if isSelected {
+            // 노란색일 때는 검은색 아이콘, 나머지는 흰색 아이콘
+            return color == .yellow ? .black : .white
+        } else {
+            return Color(.systemGray)
+        }
+    }
+    
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
@@ -173,7 +183,7 @@ struct LiquidGlassTabButton: View {
                             
                             Image(systemName: isSelected ? activeIcon : icon)
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(isSelected ? .white : Color(.systemGray))
+                                .foregroundColor(isSelected && color == .yellow ? .white : (isSelected ? .white : Color(.systemGray)))
                                 .scaleEffect(isSelected ? 1.0 : 0.9)
                         }
                         .frame(width: 36, height: 36)
@@ -199,7 +209,6 @@ struct LiquidGlassTabButton: View {
         }, perform: {})
     }
 }
-
 // MARK: - 프리뷰
 struct TabbarView_Previews: PreviewProvider {
     static var previews: some View {
