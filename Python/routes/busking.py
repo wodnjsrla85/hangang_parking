@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 from typing import Optional
+from bson import ObjectId 
 import base64
 import os
 
@@ -38,11 +39,18 @@ class buskingUpdate(BaseModel):
 
 # 유틸: Mongo 문서 포맷 보정
 def normalize_busking(doc: dict) -> dict:
-    """userid를 str로, image(bytes)를 base64로 바꿔서 반환"""
     if not doc:
         return doc
-    doc['_id'] = str(doc.get('_id'))
+    doc["_id"] = str(doc.get("_id"))  # ✅ ObjectId -> str
     return doc
+
+def to_object_id(id_str: str) -> ObjectId:
+    try:
+        return ObjectId(id_str)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid id format")
+
+
 
 @router.get('/busking/select')
 async def select():
@@ -53,9 +61,9 @@ async def select():
 @router.post('/busking/insert')
 async def insert(busking: busking):
     # userid 중복 검사
-    existing = await collection_busking.find_one({'userid': busking.userid})
-    if existing:
-        raise HTTPException(status_code=400, detail='busking is existed.')
+    # existing = await collection_busking.find_one({'userid': busking.userid})
+    # if existing:
+    #     raise HTTPException(status_code=400, detail='busking is existed.')
 
     data = busking.dict()
     # image(base64) → bytes
@@ -68,21 +76,22 @@ async def insert(busking: busking):
     await collection_busking.insert_one(data)
     return {'result': 'OK'}
 
-@router.put('/busking/update/{userid}')
-async def update(userid: str, busking: buskingUpdate):
-    # 부분 업데이트 (image 제외)
-    data = busking.dict(exclude_unset=True)
+@router.put("/busking/update/{id}")
+async def update(id: str, payload: buskingUpdate):
+    data = payload.dict(exclude_unset=True)
     if not data:
-        raise HTTPException(status_code=400, detail='No Field For Update')
+        raise HTTPException(status_code=400, detail="No Field For Update")
 
-    result = await collection_busking.update_one({'userid': userid}, {'$set': data})
+    oid = to_object_id(id)  # ✅ 문자열 → ObjectId
+    result = await collection_busking.update_one({"_id": oid}, {"$set": data})
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail='busking Not Found')
-    return {'result': 'OK'}
+        raise HTTPException(status_code=404, detail="busking Not Found")
+    return {"result": "OK"}
 
-@router.delete('/busking/delete/{userid}')
-async def delete(userid: str):
-    result = await collection_busking.delete_one({'userid': userid})
+@router.delete("/busking/delete/{id}")
+async def delete(id: str):
+    oid = to_object_id(id)  # ✅ 문자열 → ObjectId
+    result = await collection_busking.delete_one({"_id": oid})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail='busking Not Found')
-    return {'result': 'OK'}
+        raise HTTPException(status_code=404, detail="busking Not Found")
+    return {"result": "OK"}

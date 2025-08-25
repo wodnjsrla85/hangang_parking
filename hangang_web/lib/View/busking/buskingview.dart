@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hangangweb/Model/busking.dart';
-import 'package:hangangweb/VM/buskingvm.dart';
+import 'package:hangangweb/VM/buskingHandler.dart';
 
 class Buskingview extends StatefulWidget {
   final BuskingHandler handler;
@@ -46,19 +46,37 @@ class _BuskingviewState extends State<Buskingview> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _changeState(Busking b, int newState) async {
-    final r = await widget.handler.updateBuskingByUserId(
-      b.id!,
-      {'state': newState},
-    );
+ Future<void> _changeState(Busking b, int newState) async {
+  if (!mounted) return;
+
+  // ✅ 완료(3) 선택 시: 삭제 수행
+  if (newState == 3) {
+    final del = await widget.handler.deleteBuskingByUserId(b.id!); // _id 기반 삭제
     if (!mounted) return;
-    if (r.success) {
-      _toast('상태 변경: ${stateLabels[newState]}');
-      setState(() {}); // handler 내부 리스트 이미 갱신됨
+    if (del.success) {
+      _toast('완료 처리되어 삭제되었습니다.');
+      await widget.handler.fetchBuskingList();  // 서버 기준 재동기화 권장
+      setState(() {});
     } else {
-      _toast(r.message);
+      _toast('삭제 실패: ${del.message}');
     }
+    return;
   }
+
+  // ✅ 그 외 상태(0,1,2): 업데이트 수행
+  final r = await widget.handler.updateBuskingById(
+    b.id!,
+    {'state': newState},
+  );
+  if (!mounted) return;
+  if (r.success) {
+    await widget.handler.fetchBuskingList();       
+    _toast('상태 변경: ${stateLabels[newState]}');
+    setState(() {});
+  } else {
+    _toast(r.message);
+  }
+}
   //ㅎㅎ
   List<Busking> get _filtered {
     final list = widget.handler.buskingList;

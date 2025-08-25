@@ -72,24 +72,16 @@ class BuskingHandler {
 
   // ✏️ 부분 업데이트: PUT /busking/update/{userid}
   // 변경할 필드만 patch에 담아 전송 (예: {'state': 1, 'content': '수정'})
-  Future<ApiResponse<bool>> updateBuskingByUserId(
-    String userid,
-    Map<String, dynamic> patch,
-  ) async {
+ Future<ApiResponse<bool>> updateBuskingById(String id, Map<String, dynamic> patch) async {
     try {
-      if (patch.isEmpty) {
-        return ApiResponse.error('수정할 필드가 없습니다.');
-      }
-
+      if (patch.isEmpty) return ApiResponse.error('수정할 필드가 없습니다.');
       final res = await http.put(
-        Uri.parse('$baseUrl/busking/update/$userid'),
+        Uri.parse('$baseUrl/busking/update/$id'),
         headers: _headers,
         body: json.encode(patch),
       );
-
       if (res.statusCode == 200) {
-        // 로컬 상태 갱신 (필요 시 재조회)
-        final idx = buskingList.indexWhere((e) => e.userid == userid);
+        final idx = buskingList.indexWhere((e) => e.id == id);  
         if (idx != -1) {
           final old = buskingList[idx];
           buskingList[idx] = old.copyWith(
@@ -104,8 +96,7 @@ class BuskingHandler {
         }
         return ApiResponse.success(true, message: '버스킹 수정 성공');
       } else {
-        final msg = '수정 실패: HTTP ${res.statusCode} ${res.body}';
-        return ApiResponse.error(msg);
+        return ApiResponse.error('수정 실패: HTTP ${res.statusCode} ${res.body}');
       }
     } catch (e) {
       return ApiResponse.error('버스킹 수정 실패: $e');
@@ -136,4 +127,6 @@ class BuskingHandler {
   Future<void> refreshAll() async {
     await fetchBuskingList();
   }
+
+  
 }
