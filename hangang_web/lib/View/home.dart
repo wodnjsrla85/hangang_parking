@@ -177,7 +177,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            "오늘도 한강 웹서비스 관리에 수고하고 계시네요.",
+                            "오늘도 반포한강 웹서비스 관리에 수고하고 계시네요.",
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white70,
@@ -240,7 +240,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
                     // 관리 메뉴 섹션
                     const Text(
-                      "⚙️ 관리 메뉴",
+                      "⚙️ 관리 페이지",
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
