@@ -883,7 +883,7 @@ struct ModernWeatherCard: View {
                     await weatherViewModel.fetchWeather()
                 }
             }) {
-                Image(systemName: weatherViewModel.isLoading ? "arrow.clockwise" : (weatherViewModel.isConnected ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"))
+                Image(systemName: weatherViewModel.isLoading ? "arrow.clockwise" : (weatherViewModel.isConnected ? "checkmark.circle.fill" : "arrow.clockwise.circle"))
                     .foregroundColor(weatherViewModel.isConnected ? .green : .red)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 32, height: 32)
