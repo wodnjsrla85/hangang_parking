@@ -1253,27 +1253,27 @@ struct ModernMarkerDetailSheet: View {
             }
             
             // 액션 버튼들
-            if let phone = marker.phone, !phone.isEmpty {
-                VStack(spacing: 12) {
-                    Button(action: {
-                        if let phoneURL = URL(string: "tel://\(phone.replacingOccurrences(of: "-", with: ""))") {
-                            UIApplication.shared.open(phoneURL)
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "phone.fill")
-                            Text("전화 걸기")
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(12)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
-            }
+//            if let phone = marker.phone, !phone.isEmpty {
+//                VStack(spacing: 12) {
+//                    Button(action: {
+//                        if let phoneURL = URL(string: "tel://\(phone.replacingOccurrences(of: "-", with: ""))") {
+//                            UIApplication.shared.open(phoneURL)
+//                        }
+//                    }) {
+//                        HStack {
+//                            Image(systemName: "phone.fill")
+//                            Text("전화 걸기")
+//                        }
+//                        .foregroundColor(.white)
+//                        .frame(maxWidth: .infinity)
+//                        .padding()
+//                        .background(Color.green)
+//                        .cornerRadius(12)
+//                    }
+//                }
+//                .padding(.horizontal, 24)
+//                .padding(.bottom, 32)
+//            }
         }
         .background(Color(.systemBackground))
     }
