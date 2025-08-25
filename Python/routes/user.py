@@ -56,11 +56,18 @@ async def get_dashboard():
         if "Inquiry" in collections:
             inquiries_today = await db.Inquiry.count_documents({'qdate': today_str})
 
+        # 오늘 버스킹 신청 수
+        busking_today = 0
+        collections = await db.list_collection_names()
+        if "busking" in collections:
+            busking_today = await db.busking.count_documents({'state': 0})
+
         return {
             "result": "OK",
             "total_users": total_users,
             "new_today": new_today,
-            "inquiries_today": inquiries_today
+            "inquiries_today": inquiries_today,
+            "busking_today": busking_today
         }
 
     except Exception as e:
