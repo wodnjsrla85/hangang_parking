@@ -9,6 +9,12 @@ struct BuskingView: View {
     @State private var showLoginSheet2 = false
     @State private var goInquiry = false
     @State private var goStatus = false
+    @State private var isRefreshing = false
+    
+    // 승인된 버스킹만 필터링
+    private var approvedBuskings: [Busking] {
+        buskingModel.filter { $0.state == 1 } // 1은 승인 상태
+    }
     
     var body: some View {
         NavigationStack {
@@ -44,20 +50,65 @@ struct BuskingView: View {
                     .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
                     .padding(.horizontal, 16)
                     
-                    // Today Busking 헤더
+                    // Today Busking 헤더 (새로고침 버튼 추가)
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Busking Schedule")
+                            Text("Approved Busking")
                                 .font(.title2.bold())
                                 .foregroundColor(.primary)
-                            Text("모든 버스킹 일정")
+                            Text("승인된 버스킹 일정")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
+                        
+                        // 새로고침 버튼
+                        Button {
+                            refreshData()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.subheadline.weight(.medium))
+                                Text("새로고침")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue.opacity(0.1))
+                            )
+                        }
+                        .disabled(isRefreshing)
+                        .opacity(isRefreshing ? 0.6 : 1.0)
+                        
                         Image(systemName: "music.note.list")
                             .font(.title2)
                             .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // 승인된 버스킹 개수 표시
+                    HStack {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                            Text("승인된 버스킹")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(approvedBuskings.count)개")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.blue.opacity(0.1))
+                                )
+                        }
                     }
                     .padding(.horizontal, 20)
                     
@@ -81,36 +132,48 @@ struct BuskingView: View {
                     .padding(.horizontal, 20)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.blue.opacity(0.1))
+                            .fill(Color.green.opacity(0.1))
                     )
                     .padding(.horizontal, 16)
                     
-                    // 데이터 행들 (카드 스타일) - 모든 데이터 표시
-                    if buskingModel.isEmpty {
+                    // 로딩 인디케이터
+                    if isRefreshing {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("새로고침 중...")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 20)
+                    }
+                    
+                    // 데이터 행들 (승인된 것만 표시)
+                    if approvedBuskings.isEmpty && !isRefreshing {
                         VStack(spacing: 16) {
-                            Image(systemName: "music.note.slash")
+                            Image(systemName: "checkmark.circle")
                                 .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text("등록된 버스킹이 없습니다")
+                                .foregroundColor(.green)
+                            Text("승인된 버스킹이 없습니다")
                                 .font(.headline)
                                 .foregroundColor(.gray)
-                            Text("첫 번째 버스킹을 신청해보세요!")
+                            Text("승인 완료된 버스킹만 표시됩니다")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         .padding(.vertical, 40)
-                    } else {
+                    } else if !isRefreshing {
                         LazyVStack(spacing: 8) {
-                            ForEach(buskingModel, id: \._id) { row in
+                            ForEach(approvedBuskings, id: \._id) { row in
                                 HStack(spacing: 16) {
                                     // 시간 섹션 (날짜와 시간 모두 표시)
                                     VStack(spacing: 2) {
                                         Text(dateFromDateString(row.date))
                                             .font(.caption.weight(.medium))
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(.green)
                                         Text(timeFromDate(row.date))
                                             .font(.title3.bold())
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(.green)
                                         Text("DATE & TIME")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
@@ -145,16 +208,25 @@ struct BuskingView: View {
                                             .foregroundColor(.primary)
                                     }
                                     
-                                    // 상태 인디케이터
-                                    Circle()
-                                        .fill(Color.green)
-                                        .frame(width: 8, height: 8)
+                                    // 승인 상태 인디케이터
+                                    HStack(spacing: 4) {
+                                        Circle()
+                                            .fill(Color.green)
+                                            .frame(width: 8, height: 8)
+                                        Text("승인")
+                                            .font(.caption2.weight(.medium))
+                                            .foregroundColor(.green)
+                                    }
                                 }
                                 .padding(.vertical, 16)
                                 .padding(.horizontal, 20)
                                 .background(
                                     RoundedRectangle(cornerRadius: 16)
                                         .fill(.ultraThinMaterial)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                                        )
                                         .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
                                 )
                                 .padding(.horizontal, 16)
@@ -258,6 +330,9 @@ struct BuskingView: View {
                     .padding(.bottom, 100) // 🔧 탭바 공간 확보
                 }
             }
+            .refreshable {
+                await refreshDataAsync()
+            }
             .background(
                 LinearGradient(
                     colors: [Color(.systemGray6), .white],
@@ -269,23 +344,71 @@ struct BuskingView: View {
             .navigationTitle("한강공원 버스킹")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                buskingModel.removeAll()
-                Task {
-                    do {
-                        buskingModel = try await loadData(url: URL(string:"http://127.0.0.1:8000/busking/select")!)
-                        print("✅ 데이터 로딩 성공: \(buskingModel.count)개")
-                        for busking in buskingModel {
-                            print("- ID: \(busking._id), 밴드: \(busking.bandName), 상태: \(busking.state)")
-                        }
-                    } catch {
-                        print("❌ 데이터 로딩 실패: \(error)")
+                loadBuskingData()
+            }
+        }
+    }
+    
+    //---- Functions ----
+    func loadBuskingData() {
+        buskingModel.removeAll()
+        Task {
+            do {
+                buskingModel = try await loadData(url: URL(string:"http://127.0.0.1:8000/busking/select")!)
+                print("✅ 데이터 로딩 성공: \(buskingModel.count)개")
+                print("✅ 승인된 버스킹: \(approvedBuskings.count)개")
+                for busking in buskingModel {
+                    print("- ID: \(busking._id), 밴드: \(busking.bandName), 상태: \(busking.state)")
+                }
+            } catch {
+                print("❌ 데이터 로딩 실패: \(error)")
+            }
+        }
+    }
+    
+    // 새로고침 함수 (동기)
+    func refreshData() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isRefreshing = true
+        }
+        
+        Task {
+            do {
+                let newData = try await loadData(url: URL(string:"http://127.0.0.1:8000/busking/select")!)
+                await MainActor.run {
+                    buskingModel = newData
+                    print("🔄 새로고침 완료: \(buskingModel.count)개")
+                    print("🔄 승인된 버스킹: \(approvedBuskings.count)개")
+                    
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isRefreshing = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    print("❌ 새로고침 실패: \(error)")
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isRefreshing = false
                     }
                 }
             }
         }
     }
     
-    //---- Function ----
+    // 새로고침 함수 (비동기 - pull to refresh용)
+    func refreshDataAsync() async {
+        do {
+            let newData = try await loadData(url: URL(string:"http://127.0.0.1:8000/busking/select")!)
+            await MainActor.run {
+                buskingModel = newData
+                print("🔄 Pull to Refresh 완료: \(buskingModel.count)개")
+                print("🔄 승인된 버스킹: \(approvedBuskings.count)개")
+            }
+        } catch {
+            print("❌ Pull to Refresh 실패: \(error)")
+        }
+    }
+    
     func loadData(url: URL) async throws -> [Busking] {
         print("🌐 API 호출 시작: \(url)")
         let (data, response) = try await URLSession.shared.data(from: url)

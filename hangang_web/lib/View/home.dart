@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hangangweb/VM/buskingHandler.dart';
 import 'package:hangangweb/VM/inquiryHandler.dart';
+import 'package:hangangweb/View/busking/buskingview.dart';
 import 'package:hangangweb/View/community_admin_view.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -267,15 +269,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                       Icons.music_note_rounded,
                       const Color(0xFFF59E0B),
                       () {
-                        // TODO: 버스킹 관리 페이지 연결
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('버스킹 관리 페이지는 준비 중입니다.'),
-                            backgroundColor: Color(0xFFF59E0B),
-                          ),
-                        );
+                        Get.to(() => Buskingview(handler: BuskingHandler()));
                       },
-                      isEnabled: false,
                     ),
                     const SizedBox(height: 16),
 
