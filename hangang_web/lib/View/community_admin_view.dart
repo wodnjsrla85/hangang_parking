@@ -112,7 +112,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
             ),
             const SizedBox(width: 12),
             const Text(
-              '관리자 패널',
+              '게시판 관리',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
