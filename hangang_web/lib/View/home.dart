@@ -179,7 +179,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            "오늘도 반포한강 웹서비스 관리에 수고하고 계시네요.",
+                            "2025-08-25 반포 한강공원 서비스에 힘써져수서 감사합니다.",
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white70,
