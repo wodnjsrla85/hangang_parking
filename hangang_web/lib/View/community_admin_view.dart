@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hangangweb/VM/inquiryHandler.dart';
 import '../VM/community_handler.dart';
 import '../VM/comment_handler.dart';
 import '../Model/community.dart';
@@ -13,6 +14,7 @@ class CommunityAdminView extends StatefulWidget {
 }
 
 class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProviderStateMixin {
+  final InquiryHandler handler = InquiryHandler();
   final CommunityHandler communityHandler = CommunityHandler();
   final CommentHandler commentHandler = CommentHandler();
   final TextEditingController searchController = TextEditingController();
@@ -102,7 +104,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  colors: [Color(0xFF667eea), Color(0xFF667eea)],
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -135,7 +137,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
                   const Icon(Icons.account_circle, color: Color(0xFF667eea), size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    '${communityHandler.currentAdmin?.id ?? "관리자"}',
+                    '${handler.currentAdmin?.id ?? "관리자"}',
                     style: const TextStyle(
                       color: Color(0xFF667eea),
                       fontWeight: FontWeight.w600,
@@ -149,7 +151,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10b981), Color(0xFF059669)],
+                colors: [Color(0xFF10b981), Color(0xFF10b981)],
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -163,7 +165,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFFef4444), Color(0xFFdc2626)],
+                colors: [Color(0xFFef4444), Color(0xFFef4444)],
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -660,7 +662,7 @@ class _CommunityAdminViewState extends State<CommunityAdminView> with TickerProv
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  comment.username,
+                  comment.userId,
                   style: const TextStyle(
                     color: Color(0xFF10b981),
                     fontWeight: FontWeight.w600,
